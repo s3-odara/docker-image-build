@@ -1,0 +1,36 @@
+name: Build and Push Docker Image
+
+on:
+  schedule:
+      - cron: "17 20 * * 0,3"
+
+  push:
+    branches:
+      - master
+    paths:
+      - 'Dockerfile'
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          dockerfile: ./Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}/ci-builder:latest
+          no-cache: true
