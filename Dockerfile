@@ -16,4 +16,4 @@ RUN set -eux; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g @vivliostyle/cli
+RUN npm install -g @vivliostyle/cli glob path
