@@ -35,5 +35,5 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository }}/ci-builder:latest
+          tags: ghcr.io/${{ github.repository }}/vivliostyle-builder:latest
           no-cache: true
