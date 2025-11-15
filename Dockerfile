@@ -8,6 +8,8 @@ RUN set -eux; \
     apt-get install -y --no-install-recommends \
         git\
         ca-certificates\
+        poppler-utils\
+        ghostscript\
         fonts-ibm-plex \
         chromium \
         chromium-driver \
@@ -16,4 +18,8 @@ RUN set -eux; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g @vivliostyle/cli glob path
+COPY fonts /usr/local/share/fonts/custom-fonts
+
+RUN fc-cache -f -v
+
+RUN npm install -g @vivliostyle/cli press-ready
