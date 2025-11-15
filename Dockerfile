@@ -1,7 +1,7 @@
 FROM node:current-slim
 
 RUN set -eux; \
-    sed -i 's/components=main/components=main contrib/' /etc/apt/sources.list.d/debian.sources; \
+    sed -i 's/Components: main/Components: main contrib/' /etc/apt/sources.list.d/debian.sources; \
     \
     apt-get update; \
     \
