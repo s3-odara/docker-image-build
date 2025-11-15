@@ -6,6 +6,7 @@ RUN set -eux; \
     apt-get update; \
     \
     apt-get install -y --no-install-recommends \
+        git\
         fonts-ibm-plex \
         chromium \
         chromium-driver \
