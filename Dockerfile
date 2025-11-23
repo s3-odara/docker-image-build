@@ -10,8 +10,10 @@ RUN set -eux; \
         ca-certificates\
         poppler-utils\
         ghostscript\
-        fontconfig\
-        fonts-ibm-plex; \
+        fonts-ibm-plex \
+        chromium \
+        chromium-driver \
+        chromium-l10n; \
     \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*
@@ -21,5 +23,3 @@ COPY fonts /usr/local/share/fonts/custom-fonts
 RUN fc-cache -f -v
 
 RUN npm install -g @vivliostyle/cli press-ready
-
-RUN npx playwright install chromium
