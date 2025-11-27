@@ -334,26 +334,24 @@ files:
     mode: 0755
 
 actions:
-  - trigger: post-unpack
+ - trigger: post-unpack
     action: |-
-      echo "=== DEBUG: Current Directory Structure (Depth 1) ==="
-      ls -la
-      
-      echo "=== DEBUG: Searching for 'pacman.d' ==="
-      find . -name "pacman.d" -type d -maxdepth 3
-      
-      if [ -d "root.x86_64" ]; then
-        echo "=== Moving files from root.x86_64 to root ==="
+      echo "=== Manually unpacking tarball ==="
+      if [ -f archlinux-bootstrap-x86_64.tar.zst ]; then
+        tar -xf archlinux-bootstrap-x86_64.tar.zst
+        
+        rm archlinux-bootstrap-x86_64.tar.zst
+      fi
+
+      echo "=== Adjusting directory structure ==="
+      if [ -d root.x86_64 ]; then
         cd root.x86_64
         mv * ..
         cd ..
         rmdir root.x86_64
       fi
       
-      if [ ! -d "etc/pacman.d" ]; then
-        echo "=== Creating missing etc/pacman.d directory ==="
-        mkdir -p etc/pacman.d
-      fi
+      ls -d etc/pacman.d 
       
   - trigger: post-packages
     action: |-
