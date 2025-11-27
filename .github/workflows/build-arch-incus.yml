@@ -36,7 +36,7 @@ jobs:
         run: |
           IMAGE_TAG=$(date +%Y%m%d)
           
-          distrobuilder build-incus archlinux.yaml \
+          distrobuilder build-incus archlinux.yml \
             -o image.release=rolling \
             -o image.serial=$IMAGE_TAG \
             -o image.architecture=x86_64 \
