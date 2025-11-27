@@ -342,17 +342,14 @@ actions:
       echo "=== DEBUG: Searching for 'pacman.d' ==="
       find . -name "pacman.d" -type d -maxdepth 3
       
-      # 修正版: root.x86_64 がある場合の移動処理
       if [ -d "root.x86_64" ]; then
         echo "=== Moving files from root.x86_64 to root ==="
-        # サブディレクトリに入ってから親へ移動（パス指定ミスを防ぐため）
         cd root.x86_64
         mv * ..
         cd ..
         rmdir root.x86_64
       fi
       
-      # 念の為の安全策: もし移動後もディレクトリがなければ強制作成
       if [ ! -d "etc/pacman.d" ]; then
         echo "=== Creating missing etc/pacman.d directory ==="
         mkdir -p etc/pacman.d
