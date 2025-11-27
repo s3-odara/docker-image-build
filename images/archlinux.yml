@@ -336,6 +336,7 @@ files:
 actions:
   - trigger: post-unpack
     action: |-
+      cd /tmp/distrobuilder/archlinux-rolling-x86_64/
       echo "=== Manually unpacking tarball ==="
       if [ -f archlinux-bootstrap-x86_64.tar.zst ]; then
         tar -xf archlinux-bootstrap-x86_64.tar.zst
