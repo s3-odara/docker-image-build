@@ -328,7 +328,8 @@ packages:
         - base
 
 files:
-  - source: ./scripts/setup.sh
+  - generator: copy
+    source: ./scripts/setup.sh
     path: /tmp/setup.sh
     mode: 0755
 
