@@ -326,7 +326,7 @@ packages:
   sets:
     - packages:
         - base
-      actions: install
+      action: install
 
 files:
   - generator: copy
