@@ -23,6 +23,7 @@ PACKAGES=(
     wget
     curl
     man-db
+    openssh
     doas
     mold
     clang
@@ -48,10 +49,11 @@ su - builder -c "cd paru-bin && makepkg -si --noconfirm"
 PACKAGES=(
     doasedit-alternative
 )
-paru -S --noconfirm --needed "${PACKAGES[@]}"
+su - builder -c "paru -S --noconfirm --needed "${PACKAGES[@]}""
+su - builder -c "paru -Scc --noconfirm"
 
 ln -s /usr/bin/doas /usr/local/bin/sudo
-echo "permit persist user" > /etc/doas.conf
+echo "permit persist :wheel" > /etc/doas.conf
 
 
 userdel -r builder
@@ -69,6 +71,5 @@ sed -i \
     "/etc/makepkg.conf"
 
 
-paru -Scc --noconfirm
 rm -rf /var/cache/pacman/pkg/*
 rm -rf /usr/share/doc/*
