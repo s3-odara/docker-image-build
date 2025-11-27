@@ -10,7 +10,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-	environment: cloudflare-r2-filess3-odaranet
+    environment: cloudflare-r2-filess3-odaranet
     container:
       image: archlinux:latest
       options: --privileged
@@ -27,7 +27,7 @@ jobs:
 
       - name: Install Distrobuilder & Dependencies
         run: |
-          pacman -S --noconfirm distrobuilder git go base-devel
+          pacman -S --noconfirm distrobuilder git go base-devel aws-cli
           go install github.com/lxc/incus/cmd/incus-simplestreams@latest
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
@@ -41,77 +41,76 @@ jobs:
             -o image.serial=$IMAGE_TAG \
             -o image.architecture=x86_64 \
             --type=split
+          
           GENERATED_META=$(ls *.tar.xz | head -n 1)
-        
           GENERATED_ROOTFS=$(ls *.squashfs | head -n 1)
-        
+          
           echo "Detected files: $GENERATED_META and $GENERATED_ROOTFS"
-        
+          
           mv "$GENERATED_META" metadata.tar.xz
           mv "$GENERATED_ROOTFS" rootfs.squashfs
 
+      - name: Sync current repo from R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ENDPOINT_URL: https://6ecd930c8cd4dc63f87c9398762626e8.r2.cloudflarestorage.com
+          R2_BUCKET_PATH: s3://filess3-odaranet/pub/container
+        run: |
+          mkdir -p repo
+          aws s3 sync "$R2_BUCKET_PATH" ./repo --endpoint-url "$R2_ENDPOINT_URL" || true
 
-    - name: Sync current repo from R2
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_DEFAULT_REGION: auto
-		R2_ENDPOINT_URL: https://6ecd930c8cd4dc63f87c9398762626e8.r2.cloudflarestorage.com
-		R2_BUCKET_PATH: s3://filess3-odaranet/pub/container
-
-      run: |
-        mkdir -p repo
-        
-        aws s3 sync s3://$R2_BUCKET_PATH ./repo --endpoint-url $R2_ENDPOINT_URL || true
-
-    - name: Add Image to Repository
-      run: |
-        cd repo
-        
-        incus-simplestreams add \
-          ../metadata.tar.xz \
-          ../rootfs.squashfs \
-          --alias "archlinux/rolling" \
-          --os "Arch Linux" \
-          --release "rolling" \
-          --arch "x86_64"
-
-    - name: Cleanup Old Images
-      run: |
-        cd repo
-        
-        OS="Arch Linux"
-        RELEASE="rolling"
-        ARCH="x86_64"
-        
-        TARGET_DIR="images/$OS/$RELEASE/$ARCH"
-        
-        if [ -d "$TARGET_DIR" ]; then
-          echo "Checking for old images in $TARGET_DIR..."
+      - name: Add Image to Repository
+        run: |
+          cd repo
           
-          VERSIONS_TO_DELETE=$(ls -1t "$TARGET_DIR" | tail -n + 3)
+          incus-simplestreams add \
+            ../images/metadata.tar.xz \
+            ../images/rootfs.squashfs \
+            --alias "archlinux/rolling" \
+            --os "Arch Linux" \
+            --release "rolling" \
+            --arch "x86_64"
+
+      - name: Cleanup Old Images
+        run: |
+          cd repo
           
-          for VERSION in $VERSIONS_TO_DELETE; do
-            echo "Deleting old version: $VERSION"
+          OS="Arch Linux"
+          RELEASE="rolling"
+          ARCH="x86_64"
+          
+          TARGET_DIR="images/$OS/$RELEASE/$ARCH"
+          
+          if [ -d "$TARGET_DIR" ]; then
+            echo "Checking for old images in $TARGET_DIR..."
             
-            incus-simplestreams remove \
-              --os "$OS" \
-              --release "$RELEASE" \
-              --arch "$ARCH" \
-              --version "$VERSION"
-          done
-        else
-          echo "Directory not found: $TARGET_DIR. Skipping cleanup."
-        fi
+            VERSIONS_TO_DELETE=$(ls -1t "$TARGET_DIR" | tail -n +3)
+            
+            IFS=$'\n'
+            for VERSION in $VERSIONS_TO_DELETE; do
+              echo "Deleting old version: $VERSION"
+              
+              incus-simplestreams remove \
+                --os "$OS" \
+                --release "$RELEASE" \
+                --arch "$ARCH" \
+                --version "$VERSION"
+            done
+            unset IFS
+          else
+            echo "Directory not found: $TARGET_DIR. Skipping cleanup."
+          fi
 
-    - name: Upload changes to R2
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_DEFAULT_REGION: auto
-		R2_ENDPOINT_URL: https://6ecd930c8cd4dc63f87c9398762626e8.r2.cloudflarestorage.com
-		R2_BUCKET_PATH: s3://filess3-odaranet/pub/container
-      run: |
-        aws s3 sync ./repo s3://$R2_BUCKET_PATH \
-          --endpoint-url $R2_ENDPOINT_URL \
-          --delete
+      - name: Upload changes to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ENDPOINT_URL: https://6ecd930c8cd4dc63f87c9398762626e8.r2.cloudflarestorage.com
+          R2_BUCKET_PATH: filess3-odaranet/pub/container
+        run: |
+          aws s3 sync ./repo "s3://$R2_BUCKET_PATH" \
+            --endpoint-url "$R2_ENDPOINT_URL" \
+            --delete
