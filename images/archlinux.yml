@@ -334,7 +334,7 @@ files:
     mode: 0755
 
 actions:
- - trigger: post-unpack
+  - trigger: post-unpack
     action: |-
       echo "=== Manually unpacking tarball ==="
       if [ -f archlinux-bootstrap-x86_64.tar.zst ]; then
