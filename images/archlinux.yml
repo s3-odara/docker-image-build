@@ -336,7 +336,7 @@ files:
 actions:
   - trigger: post-unpack
     action: |-
-	  echo "=== DEBUG: Current Directory Structure (Depth 1) ==="
+      echo "=== DEBUG: Current Directory Structure (Depth 1) ==="
       ls -la
       
       echo "=== DEBUG: Searching for 'pacman.d' ==="
