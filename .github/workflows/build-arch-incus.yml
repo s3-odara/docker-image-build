@@ -50,6 +50,7 @@ jobs:
           mv "$GENERATED_META" metadata.tar.xz
           mv "$GENERATED_ROOTFS" rootfs.squashfs
       - name: Setup tmate session
+        if: ${{ always() }}
         uses: mxschmitt/action-tmate@v3
 
       - name: Sync current repo from R2
