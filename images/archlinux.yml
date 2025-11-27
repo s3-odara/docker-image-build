@@ -334,7 +334,7 @@ files:
     mode: 0755
 
 actions:
-- trigger: post-unpack
+  - trigger: post-unpack
     action: |-
       if [ -d root.x86_64 ]; then
         mv root.x86_64/* .
