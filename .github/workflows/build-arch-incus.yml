@@ -27,7 +27,7 @@ jobs:
 
       - name: Install Distrobuilder & Dependencies
         run: |
-          pacman -S --noconfirm distrobuilder git go base-devel aws-cli
+          pacman -S --noconfirm distrobuilder git go base-devel aws-cli zstd
           go install github.com/lxc/incus/cmd/incus-simplestreams@latest
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
 
