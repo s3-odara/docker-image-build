@@ -30,7 +30,7 @@ jobs:
 
       - name: Install Distrobuilder & Dependencies
         run: |
-        sudo snap install distrobuilder --classic
+          sudo snap install distrobuilder --classic
 
       - name: Generate Build Variables
         id: vars
