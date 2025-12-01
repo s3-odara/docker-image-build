@@ -3,7 +3,7 @@ name: Build Arch Linux Incus Image
 on:
   push:
     paths:
-      - 'images/archlinux.yaml'
+      - 'images/archlinux.yml'
       - 'images/scripts/**'
   workflow_dispatch:
 
@@ -16,21 +16,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-	  - name: Install Dependencies
+      - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y debootstrap rsync gpg squashfs-tools zstd
 
+      - name: Setup Go and Install Tools
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+      - name: Install Incus Simplestreams
+        run: go install github.com/lxc/incus/cmd/incus-simplestreams@latest
+
       - name: Install Distrobuilder & Dependencies
         run: |
-		  sudo snap install distrobuilder --classic
+        sudo snap install distrobuilder --classic
 
-	  - name: Generate Build Variables
+      - name: Generate Build Variables
         id: vars
         run: |
           echo "BUILD_SERIAL=$(date +%Y%m%d_%H%M)" >> $GITHUB_ENV
           
-          INPUT_RELEASE="${{ github.event.inputs.iso_release }}"
+          INPUT_RELEASE="${{ inputs.iso_release }}"
           
           if [ -n "$INPUT_RELEASE" ]; then
             ISO_RELEASE="$INPUT_RELEASE"
@@ -42,6 +49,7 @@ jobs:
           
           echo "Build Serial: $(date +%Y%m%d_%H%M)"
           echo "Target ISO Release: $ISO_RELEASE"
+
       - name: Build Incus Image
         run: |
           sudo mkdir -p /var/cache/distrobuilder
@@ -68,9 +76,9 @@ jobs:
         run: |
           cd repo
           
-          incus-simplestreams add \
-            ../images/incus.tar.xz \
-            ../images/rootfs.squashfs \
+          ~/go/bin/incus-simplestreams add \
+            ../incus.tar.xz \
+            ../rootfs.squashfs \
             --alias "archlinux/rolling" \
             --os "Arch Linux" \
             --release "rolling" \
