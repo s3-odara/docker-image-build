@@ -11,47 +11,47 @@ jobs:
   build:
     runs-on: ubuntu-latest
     environment: cloudflare-r2-filess3-odaranet
-    container:
-      image: archlinux:latest
-      options: --privileged
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Initialize Arch Environment
+	  - name: Install Dependencies
         run: |
-          pacman-key --init
-          pacman-key --populate archlinux
-          pacman -Syu --noconfirm
+          sudo apt-get update
+          sudo apt-get install -y debootstrap rsync gpg squashfs-tools zstd
 
       - name: Install Distrobuilder & Dependencies
         run: |
-          pacman -S --noconfirm distrobuilder git go base-devel aws-cli zstd
-          go install github.com/lxc/incus/cmd/incus-simplestreams@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+		  sudo snap install distrobuilder --classic
 
-      - name: Build Image
-        working-directory: ./images
+	  - name: Generate Build Variables
+        id: vars
         run: |
-          IMAGE_TAG=$(date +%Y%m%d)
+          echo "BUILD_SERIAL=$(date +%Y%m%d_%H%M)" >> $GITHUB_ENV
           
-          distrobuilder build-incus archlinux.yml \
-            -o image.release=rolling \
-            -o image.serial=$IMAGE_TAG \
+          INPUT_RELEASE="${{ github.event.inputs.iso_release }}"
+          
+          if [ -n "$INPUT_RELEASE" ]; then
+            ISO_RELEASE="$INPUT_RELEASE"
+          else
+            ISO_RELEASE="$(date +'%Y.%m.01')"
+          fi
+          
+          echo "ISO_RELEASE=$ISO_RELEASE" >> $GITHUB_ENV
+          
+          echo "Build Serial: $(date +%Y%m%d_%H%M)"
+          echo "Target ISO Release: $ISO_RELEASE"
+      - name: Build Incus Image
+        run: |
+          sudo mkdir -p /var/cache/distrobuilder
+
+          sudo distrobuilder build-incus images/archlinux.yml \
+            --cache-dir /var/cache/distrobuilder \
+            -o image.release=${{ env.ISO_RELEASE }} \
+            -o image.serial=${{ env.BUILD_SERIAL }} \
             -o image.architecture=x86_64 \
-            --type=split
-          
-          GENERATED_META=$(ls *.tar.xz | head -n 1)
-          GENERATED_ROOTFS=$(ls *.squashfs | head -n 1)
-          
-          echo "Detected files: $GENERATED_META and $GENERATED_ROOTFS"
-          
-          mv "$GENERATED_META" metadata.tar.xz
-          mv "$GENERATED_ROOTFS" rootfs.squashfs
-      - name: Setup tmate session
-        if: ${{ always() }}
-        uses: mxschmitt/action-tmate@v3
+            -o image.variant=default
 
       - name: Sync current repo from R2
         env:
@@ -69,7 +69,7 @@ jobs:
           cd repo
           
           incus-simplestreams add \
-            ../images/metadata.tar.xz \
+            ../images/incus.tar.xz \
             ../images/rootfs.squashfs \
             --alias "archlinux/rolling" \
             --os "Arch Linux" \
