@@ -38,7 +38,7 @@ packages:
   sets:
     - packages:
         - base
-		- linux
+        - linux
       action: install
 
 files:
@@ -51,9 +51,9 @@ actions:
   - trigger: post-unpack
     action: |-
       pacman-key --init
-	  pacman-key --populate archlinux
+      pacman-key --populate archlinux
       pacman-key --refresh-keys
-	  pacman -Sy --noconfirm archlinux-keyring
+      pacman -Sy --noconfirm archlinux-keyring
   - trigger: post-packages
     action: |-
       /tmp/setup.sh
