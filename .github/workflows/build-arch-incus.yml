@@ -32,7 +32,7 @@ jobs:
         run: |
           sudo snap install distrobuilder --classic
 
-     - name: Cache Distrobuilder Assets
+      - name: Cache Distrobuilder Assets
         uses: actions/cache@v3
         with:
           path: /var/cache/distrobuilder
