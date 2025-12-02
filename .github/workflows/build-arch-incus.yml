@@ -84,6 +84,7 @@ jobs:
 
       - name: Fix Cache Permissions
         run: |
+          sudo rm -rf /var/cache/distrobuilder/rootfs
           sudo chown -R $USER:$USER /var/cache/distrobuilder
 
       - name: Sync current repo from R2
