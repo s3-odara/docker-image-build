@@ -19,7 +19,7 @@ targets:
           lxc.arch = x86_64
 
 files:
-  - name: network
+  - generator: dump
     path: /etc/systemd/network/eth0.network
     content: |-
       [Match]
