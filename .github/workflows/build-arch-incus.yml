@@ -96,6 +96,46 @@ jobs:
         run: |
           cd repo
           
+          KEEP_COUNT=2
+
+          echo "Keeping latest $KEEP_COUNT versions per product..."
+
+
+          FINGERPRINTS=$(jq -r --argjson k "$KEEP_COUNT" '
+            .products[] 
+            | .versions 
+            | to_entries 
+            | sort_by(.key) | reverse 
+            | .[$k:] 
+            | .[].value.items[] 
+            | select(.ftype | test("incus.tar")) 
+            | .sha256
+          ' streams/v1/images.json)
+
+          if [ -z "$FINGERPRINTS" ]; then
+            echo "No old images found to remove."
+          else
+            for fp in $FINGERPRINTS; do
+              echo "Removing from index: $fp"
+              sudo ~/go/bin/incus-simplestreams remove "$fp"
+            done
+          fi
+
+          
+          echo "Running garbage collection for orphaned files..."
+          jq -r '.. | .path? | select(.)' streams/v1/images.json | sort > referenced_files.txt
+          find images -type f | sort > actual_files.txt
+          comm -23 actual_files.txt referenced_files.txt | while read -r file; do
+            echo "Deleting orphaned file: $file"
+            sudo rm -f "$file"
+          done
+
+          rm referenced_files.txt actual_files.txt
+
+      - name: Cleanup Old Images
+        run: |
+          cd repo
+          
           OS="Arch Linux"
           RELEASE="rolling"
           ARCH="x86_64"
