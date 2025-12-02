@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Dependencies
         run: |
@@ -75,6 +75,7 @@ jobs:
 
           sudo distrobuilder build-incus images/archlinux.yml \
             --cache-dir /var/cache/distrobuilder \
+            --cleanup=false \
             -o image.release=${{ env.ISO_RELEASE }} \
             -o image.serial=${{ env.BUILD_SERIAL }} \
             -o image.architecture=x86_64 \
@@ -82,7 +83,6 @@ jobs:
             --compression zstd
 
       - name: Fix Cache Permissions
-        if: always() 
         run: |
           sudo chown -R $USER:$USER /var/cache/distrobuilder
 

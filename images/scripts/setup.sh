@@ -50,7 +50,6 @@ PACKAGES=(
     doasedit-alternative
 )
 su - builder -c "paru -S --noconfirm --needed "${PACKAGES[@]}""
-su - builder -c "yes | paru -Scc"
 
 ln -s /usr/bin/doas /usr/local/bin/sudo
 echo "permit persist :wheel" > /etc/doas.conf
@@ -71,5 +70,4 @@ sed -i \
     "/etc/makepkg.conf"
 
 
-rm -rf /var/cache/pacman/pkg/*
 rm -rf /usr/share/doc/*
