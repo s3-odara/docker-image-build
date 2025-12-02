@@ -91,10 +91,6 @@ jobs:
           ~/go/bin/incus-simplestreams add \
             ../incus.tar.zst \
             ../rootfs.squashfs \
-            --alias "archlinux/rolling" \
-            --os "Arch Linux" \
-            --release "rolling" \
-            --arch "x86_64"
 
       - name: Cleanup Old Images
         run: |
