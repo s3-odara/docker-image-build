@@ -50,6 +50,35 @@ jobs:
           echo "Build Serial: $(date +%Y%m%d_%H%M)"
           echo "Target ISO Release: $ISO_RELEASE"
 
+      - name: Generate Build Variables
+        id: vars
+        run: |
+          echo "BUILD_SERIAL=$(date +%Y%m%d_%H%M)" >> $GITHUB_ENV
+          
+          INPUT_RELEASE="${{ github.event.inputs.iso_release }}"
+          
+          if [ -n "$INPUT_RELEASE" ]; then
+            ISO_RELEASE="$INPUT_RELEASE"
+            echo "Using manual input: $ISO_RELEASE"
+          else
+            echo "Fetching latest ISO release date from archive.archlinux.org..."
+            
+            LATEST_DATE=$(curl -sL https://archive.archlinux.org/iso/ | \
+                          grep -oE '[0-9]{4}\.[0-9]{2}\.[0-9]{2}' | \
+                          sort -Vu | \
+                          tail -n 1)
+            
+            if [ -z "$LATEST_DATE" ]; then
+              echo "Error: Failed to fetch latest date. Fallback to 'current'."
+              ISO_RELEASE="current"
+            else
+              ISO_RELEASE="$LATEST_DATE"
+            fi
+            echo "Detected latest release: $ISO_RELEASE"
+          fi
+          
+          echo "ISO_RELEASE=$ISO_RELEASE" >> $GITHUB_ENV
+
       - name: Build Incus Image
         run: |
           sudo mkdir -p /var/cache/distrobuilder
