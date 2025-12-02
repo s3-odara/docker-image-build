@@ -1,37 +1,9 @@
 #!/bin/bash
 set -e
 
-pacman-key --init
-pacman-key --populate archlinux
-
 curl -s "https://archlinux.org/mirrorlist/?protocol=https&use_mirror_status=on" | \
         sed -e 's/^#Server/Server/' -e '/^#/d' | \
             head -n 50 > /etc/pacman.d/mirrorlist
-
-pacman -Syu --noconfirm
-
-PACKAGES=(
-    base-devel
-    vi
-    tmux
-    gnupg
-    zsh
-    zsh-syntax-highlighting
-    zsh-autosuggestions
-    git
-    vim
-    wget
-    curl
-    man-db
-    openssh
-    doas
-    mold
-    clang
-    ccache
-    cloud-init
-    zsh-completions
-)
-pacman -S --noconfirm --needed "${PACKAGES[@]}"
 
 sed -i 's/#en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
 sed -i 's/#ja_JP.UTF-8/ja_JP.UTF-8/' /etc/locale.gen

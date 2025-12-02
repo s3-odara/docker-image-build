@@ -33,7 +33,7 @@ files:
     mode: 0755
 
   - name: meta-data
-  generator: cloud-init
+    generator: cloud-init
 
   - name: network-config
     generator: cloud-init
@@ -52,6 +52,25 @@ packages:
   sets:
     - packages:
         - base
+        - base-devel
+        - vi
+        - tmux
+        - gnupg
+        - zsh
+        - zsh-syntax-highlighting
+        - zsh-autosuggestions
+        - git
+        - vim
+        - wget
+        - curl
+        - man-db
+        - openssh
+        - doas
+        - mold
+        - clang
+        - ccache
+        - cloud-init
+        - zsh-completions 
       action: install
 
 actions:
