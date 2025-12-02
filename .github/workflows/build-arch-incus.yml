@@ -81,6 +81,11 @@ jobs:
             -o image.variant=default \
             --compression zstd
 
+      - name: Fix Cache Permissions
+        if: always() 
+        run: |
+          sudo chown -R $USER:$USER /var/cache/distrobuilder
+
       - name: Sync current repo from R2
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
