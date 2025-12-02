@@ -29,7 +29,7 @@ files:
       DHCP=yes
   - generator: copy
     source: ./scripts/setup.sh
-    path: /tmp/setup.sh
+    path: /root/setup.sh
     mode: 0755
 
 
@@ -52,6 +52,6 @@ actions:
   - trigger: post-files
     action: |-
       #!/bin/bash
-      /tmp/setup.sh
-      rm /tmp/setup.sh
+      /root/setup.sh
+      rm /root/setup.sh
 
