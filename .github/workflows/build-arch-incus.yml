@@ -37,24 +37,6 @@ jobs:
         run: |
           echo "BUILD_SERIAL=$(date +%Y%m%d_%H%M)" >> $GITHUB_ENV
           
-          INPUT_RELEASE="${{ inputs.iso_release }}"
-          
-          if [ -n "$INPUT_RELEASE" ]; then
-            ISO_RELEASE="$INPUT_RELEASE"
-          else
-            ISO_RELEASE="$(date +'%Y.%m.01')"
-          fi
-          
-          echo "ISO_RELEASE=$ISO_RELEASE" >> $GITHUB_ENV
-          
-          echo "Build Serial: $(date +%Y%m%d_%H%M)"
-          echo "Target ISO Release: $ISO_RELEASE"
-
-      - name: Generate Build Variables
-        id: vars
-        run: |
-          echo "BUILD_SERIAL=$(date +%Y%m%d_%H%M)" >> $GITHUB_ENV
-          
           INPUT_RELEASE="${{ github.event.inputs.iso_release }}"
           
           if [ -n "$INPUT_RELEASE" ]; then
