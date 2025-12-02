@@ -28,7 +28,7 @@ files:
       [Network]
       DHCP=yes
   - generator: copy
-    source: ./images/scripts/setup.sh
+    source: ./scripts/setup.sh
     path: /tmp/setup.sh
     mode: 0755
 
