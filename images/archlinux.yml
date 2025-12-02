@@ -47,12 +47,11 @@ packages:
 actions:
   - trigger: post-unpack
     action: |-
-      pacman-key --init
-      pacman-key --populate archlinux
-      pacman-key --refresh-keys
+      #!/bin/bash
       pacman -Sy --noconfirm archlinux-keyring
   - trigger: post-packages
     action: |-
+      #!/bin/bash
       /tmp/setup.sh
       rm /tmp/setup.sh
 
