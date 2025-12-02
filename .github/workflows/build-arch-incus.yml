@@ -33,7 +33,7 @@ jobs:
           sudo snap install distrobuilder --classic
 
       - name: Cache Distrobuilder Assets
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /var/cache/distrobuilder
           key: distrobuilder-${{ runner.os }}-${{ hashFiles('images/archlinux.yml') }}-${{ env.ISO_RELEASE }}
