@@ -5,13 +5,6 @@ curl -s "https://archlinux.org/mirrorlist/?protocol=https&use_mirror_status=on" 
         sed -e 's/^#Server/Server/' -e '/^#/d' | \
             head -n 50 > /etc/pacman.d/mirrorlist
 
-sed -i 's/#en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
-sed -i 's/#ja_JP.UTF-8/ja_JP.UTF-8/' /etc/locale.gen
-locale-gen
-echo "LANG=en_US.UTF-8" > /etc/locale.conf
-
-ln -sf /usr/share/zoneinfo/Asia/Tokyo /etc/localtime
-
 useradd -m builder
 echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
 
@@ -25,8 +18,6 @@ su - builder -c "paru -S --noconfirm --needed "${PACKAGES[@]}""
 su - builder -c "yes | paru -Scc"
 
 ln -s /usr/bin/doas /usr/local/bin/sudo
-echo "permit persist :wheel" > /etc/doas.conf
-
 
 userdel -r builder
 rm /etc/sudoers.d/builder
