@@ -28,7 +28,7 @@ files:
       [Network]
       DHCP=yes
   - generator: copy
-    source: ./scripts/setup.sh
+    source: ./images/scripts/setup.sh
     path: /tmp/setup.sh
     mode: 0755
 
@@ -49,7 +49,7 @@ actions:
     action: |-
       #!/bin/bash
       pacman -Sy --noconfirm archlinux-keyring
-  - trigger: post-packages
+  - trigger: post-files
     action: |-
       #!/bin/bash
       /tmp/setup.sh
