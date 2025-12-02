@@ -22,7 +22,7 @@ jobs:
           sudo apt-get install -y debootstrap rsync gpg squashfs-tools zstd
 
       - name: Setup Go and Install Tools
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: 'stable'
       - name: Install Incus Simplestreams
