@@ -60,7 +60,10 @@ userdel -r builder
 rm /etc/sudoers.d/builder
 
 systemctl enable sshd
-systemctl enable cloud-init-local.service cloud-init.service cloud-config.service cloud-final.service
+systemctl enable cloud-init-local.service
+systemctl enable cloud-init.service
+systemctl enable cloud-config.service
+systemdtl enable cloud-final.service
 
 sed -i \
     -e 's/CFLAGS="-march=x86-64/CFLAGS="-march=native/' \
