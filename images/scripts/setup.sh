@@ -50,7 +50,7 @@ PACKAGES=(
     doasedit-alternative
 )
 su - builder -c "paru -S --noconfirm --needed "${PACKAGES[@]}""
-su - builder -c "paru -Scc --noconfirm"
+su - builder -c "yes | paru -Scc"
 
 ln -s /usr/bin/doas /usr/local/bin/sudo
 echo "permit persist :wheel" > /etc/doas.conf

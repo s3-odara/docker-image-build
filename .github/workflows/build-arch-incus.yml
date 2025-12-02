@@ -92,6 +92,13 @@ jobs:
             ../incus.tar.zst \
             ../rootfs.squashfs \
 
+      - name: Debug
+        run: |
+          INCUS_SS="$HOME/go/bin/incus-simplestreams"
+          
+          echo "=== IMAGE LIST JSON START ==="
+          $INCUS_SS list --format json | jq .
+          echo "=== IMAGE LIST JSON END ==="
       - name: Cleanup Old Images
         run: |
           cd repo
@@ -99,28 +106,32 @@ jobs:
           OS="Arch Linux"
           RELEASE="rolling"
           ARCH="x86_64"
-          
+          INCUS_SS="$HOME/go/bin/incus-simplestreams"
           TARGET_DIR="images/$OS/$RELEASE/$ARCH"
           
           if [ -d "$TARGET_DIR" ]; then
             echo "Checking for old images in $TARGET_DIR..."
             
-            VERSIONS_TO_DELETE=$(ls -1t "$TARGET_DIR" | tail -n +3)
+            VERSIONS_TO_DELETE=$(ls -1t "$TARGET_DIR" | tail -n +2)
             
+            IMAGE_LIST_JSON=$($INCUS_SS list --format json)
+
             IFS=$'\n'
             for VERSION in $VERSIONS_TO_DELETE; do
-              echo "Deleting old version: $VERSION"
+              echo "Processing deletion for directory: $VERSION"
               
-              incus-simplestreams remove \
-                --os "$OS" \
-                --release "$RELEASE" \
-                --arch "$ARCH" \
-                --version "$VERSION"
+              FINGERPRINT=$(echo "$IMAGE_LIST_JSON" | jq -r --arg v "$VERSION" '.[] | select(.properties.serial == $v or .properties.version == $v) | .fingerprint')
+
+              if [ -n "$FINGERPRINT" ] && [ "$FINGERPRINT" != "null" ]; then
+                echo "Found fingerprint: $FINGERPRINT. Removing..."
+                $INCUS_SS remove "$FINGERPRINT"
+              else
+                echo "Fingerprint not found for version $VERSION. Force removing directory..."
+                rm -rf "$TARGET_DIR/$VERSION"
+              fi
             done
             unset IFS
-          else
-            echo "Directory not found: $TARGET_DIR. Skipping cleanup."
-          fi
+          fi 
 
       - name: Upload changes to R2
         env:
