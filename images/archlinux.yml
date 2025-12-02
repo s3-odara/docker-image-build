@@ -11,8 +11,6 @@ source:
 
 targets:
   lxc:
-    create-message: |
-      You just created an Arch Linux container (release={{ image.release }}, serial={{ image.serial }})
     config:
       - type: all
         content: |-
@@ -29,6 +27,11 @@ files:
 
       [Network]
       DHCP=yes
+  - generator: copy
+    source: ./scripts/setup.sh
+    path: /tmp/setup.sh
+    mode: 0755
+
 
 packages:
   manager: pacman
@@ -40,12 +43,6 @@ packages:
         - base
         - linux
       action: install
-
-files:
-  - generator: copy
-    source: ./scripts/setup.sh
-    path: /tmp/setup.sh
-    mode: 0755
 
 actions:
   - trigger: post-unpack
