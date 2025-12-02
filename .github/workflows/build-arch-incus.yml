@@ -94,6 +94,7 @@ jobs:
 
       - name: Debug
         run: |
+          cd repo
           INCUS_SS="$HOME/go/bin/incus-simplestreams"
           
           echo "=== IMAGE LIST JSON START ==="
