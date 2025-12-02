@@ -103,34 +103,28 @@ jobs:
       - name: Cleanup Old Images
         run: |
           cd repo
-          
           KEEP_COUNT=2
-
-          echo "Keeping latest $KEEP_COUNT versions per product..."
-
-
-          FINGERPRINTS=$(jq -r --argjson k "$KEEP_COUNT" '
-            .products[] 
-            | .versions 
-            | to_entries 
-            | sort_by(.key) | reverse 
-            | .[$k:] 
-            | .[].value.items[] 
-            | select(.ftype | test("incus.tar")) 
-            | .sha256
-          ' streams/v1/images.json)
-
-          if [ -z "$FINGERPRINTS" ]; then
-            echo "No old images found to remove."
-          else
-            for fp in $FINGERPRINTS; do
-              echo "Removing from index: $fp"
-              sudo ~/go/bin/incus-simplestreams remove "$fp"
-            done
-          fi
-
           
+          echo "Pruning index to keep only the latest $KEEP_COUNT versions per product..."
+
+          sudo jq --argjson k "$KEEP_COUNT" '
+            .products |= with_entries(
+              .value.versions |= (
+                to_entries 
+                | sort_by(.key) 
+                | reverse 
+                | .[0:$k] 
+                | from_entries
+              )
+            )
+          ' streams/v1/images.json > images.json.tmp
+          
+          sudo cp images.json.tmp streams/v1/images.json
+          sudo rm images.json.tmp
+          
+          echo "Index updated."
           echo "Running garbage collection for orphaned files..."
+
           jq -r '.. | .path? | select(.)' streams/v1/images.json | sort > referenced_files.txt
           find images -type f | sort > actual_files.txt
           comm -23 actual_files.txt referenced_files.txt | while read -r file; do
@@ -139,43 +133,6 @@ jobs:
           done
 
           rm referenced_files.txt actual_files.txt
-
-      - name: Cleanup Old Images
-        run: |
-          cd repo
-          
-          OS="Arch Linux"
-          RELEASE="rolling"
-          ARCH="x86_64"
-          INCUS_SS="$HOME/go/bin/incus-simplestreams"
-          TARGET_DIR="images/$OS/$RELEASE/$ARCH"
-          
-          if [ -d "$TARGET_DIR" ]; then
-            echo "Checking for old images in $TARGET_DIR..."
-            
-            # last 2 images
-            VERSIONS_TO_DELETE=$(ls -1t "$TARGET_DIR" | tail -n +3)
-            
-            IMAGE_LIST_JSON=$($INCUS_SS list --format json)
-
-            IFS=$'\n'
-            for VERSION in $VERSIONS_TO_DELETE; do
-              echo "Processing deletion for directory: $VERSION"
-              
-              FINGERPRINT=$(echo "$IMAGE_LIST_JSON" | jq -r --arg v "$VERSION" '.[] | select(.[1] | contains($v)) | .[0]')
-
-              if [ -n "$FINGERPRINT" ] && [ "$FINGERPRINT" != "null" ]; then
-                echo "Found fingerprint: $FINGERPRINT. Removing..."
-                $INCUS_SS remove "$FINGERPRINT"
-              else
-                echo "Fingerprint not found for version $VERSION. Force removing directory..."
-                rm -rf "$TARGET_DIR/$VERSION"
-              fi
-            done
-            unset IFS
-          else
-             echo "Target directory $TARGET_DIR does not exist. Skipping."
-          fi
 
       - name: Upload changes to R2
         env:
