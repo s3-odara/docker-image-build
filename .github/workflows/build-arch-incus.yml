@@ -70,7 +70,8 @@ jobs:
             -o image.release=${{ env.ISO_RELEASE }} \
             -o image.serial=${{ env.BUILD_SERIAL }} \
             -o image.architecture=x86_64 \
-            -o image.variant=default
+            -o image.variant=default \
+            --compression zstd
 
       - name: Sync current repo from R2
         env:
@@ -88,7 +89,7 @@ jobs:
           cd repo
           
           ~/go/bin/incus-simplestreams add \
-            ../incus.tar.xz \
+            ../incus.tar.zst \
             ../rootfs.squashfs \
             --alias "archlinux/rolling" \
             --os "Arch Linux" \
