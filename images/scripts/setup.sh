@@ -1,5 +1,4 @@
-#!/bin/bash
-set -euo pipefail
+#!/bin/bash -x
 
 USERNAME="user"
 USER_COMMENT="General User"
