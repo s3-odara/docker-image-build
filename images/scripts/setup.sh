@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 USERNAME="user"
 USER_COMMENT="General User"
@@ -48,12 +48,11 @@ echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
 su - builder -c "git clone https://aur.archlinux.org/paru-bin.git"
 su - builder -c "cd paru-bin && makepkg -si --noconfirm"
 
-PACKAGES=(
-    doasedit-alternative
-    zsh-pure-prompt
-)
-su - builder -c "paru -S --noconfirm --needed "${PACKAGES[@]}""
-su - builder -c "yes | paru -Scc"
+PACKAGES="doasedit-alternative zsh-pure-prompt"
+sudo -u builder bash -c "paru -S --noconfirm --needed $PACKAGES"
+
+sudo -u builder bash -c "yes | paru -Scc"
+
 
 userdel -r builder
 
