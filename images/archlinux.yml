@@ -67,10 +67,11 @@ packages:
         - openssh
         - doas
         - mold
-        - clang
         - ccache
         - cloud-init
         - zsh-completions 
+        - stow
+        - knot-resolver
       action: install
 
 actions:
