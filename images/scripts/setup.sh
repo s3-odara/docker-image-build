@@ -31,15 +31,6 @@ locale-gen
 
 echo "LANG=en_US.UTF-8" > /etc/locale.conf
 
-cat <<EOF > /etc/doas.conf
-permit nopass builder
-EOF
-
-chown root:root /etc/doas.conf
-chmod 0600 /etc/doas.conf
-
-ln -sf /usr/bin/doas /usr/local/bin/sudo
-
 sed -i \
     -e 's/CFLAGS="-march=x86-64/CFLAGS="-march=native/' \
     -e '/^LDFLAGS=/ s/"$/ -fuse-ld=mold"/' \
@@ -53,6 +44,7 @@ curl -s "https://archlinux.org/mirrorlist/?protocol=https&use_mirror_status=on" 
             head -n 50 > /etc/pacman.d/mirrorlist
 
 useradd -m builder
+echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
 
 su - builder -c "git clone https://aur.archlinux.org/paru-bin.git"
 su - builder -c "cd paru-bin && makepkg -si --noconfirm"
@@ -68,6 +60,12 @@ userdel -r builder
 cat <<EOF > /etc/doas.conf
 permit nopass :wheel
 EOF
+
+chown root:root /etc/doas.conf
+chmod 0600 /etc/doas.conf
+
+ln -sf /usr/bin/doas /usr/local/bin/sudo
+rm /etc/sudoers.d/builder
 
 
 sudo -u "$USERNAME" bash <<EOF
