@@ -3,7 +3,7 @@ set -euo pipefail
 
 USERNAME="user"
 USER_COMMENT="General User"
-USER_PASSWD="user"
+USER_PASSWORD="user"
 SSH_KEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICblPjqCTllD9zDPGS++Urlw4XqyXixufgn8iFEoDnkK"
 
 if ! id "$USERNAME" &>/dev/null; then
@@ -64,7 +64,11 @@ su - builder -c "paru -S --noconfirm --needed "${PACKAGES[@]}""
 su - builder -c "yes | paru -Scc"
 
 userdel -r builder
-rm /etc/sudoers.d/builder
+
+cat <<EOF > /etc/doas.conf
+permit nopass :wheel
+EOF
+
 
 sudo -u "$USERNAME" bash <<EOF
     set -e
@@ -82,17 +86,5 @@ sudo -u "$USERNAME" bash <<EOF
 EOF
 
 systemctl enable sshd
-systemctl enable cloud-init-local.service
-systemctl enable cloud-init.service
-systemctl enable cloud-config.service
-systemdtl enable cloud-final.service
-
-sed -i \
-    -e 's/CFLAGS="-march=x86-64/CFLAGS="-march=native/' \
-    -e '/^LDFLAGS=/ s/"$/ -fuse-ld=mold"/' \
-    -e '/^LTOFLAGS=/a RUSTFLAGS="-C opt-level=3 -C link-arg=-fuse-ld=mold -C target-cpu=native"' \
-    -e 's/#MAKEFLAGS="-j2"/MAKEFLAGS="-j16"/' \
-    -e '/^BUILDENV=/ s/!ccache/ccache/' \
-    "/etc/makepkg.conf"
 
 rm -rf /usr/share/doc/*
