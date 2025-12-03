@@ -32,18 +32,6 @@ files:
     path: /root/setup.sh
     mode: 0755
 
-  - name: meta-data
-    generator: cloud-init
-
-  - name: network-config
-    generator: cloud-init
-
-  - name: user-data
-    generator: cloud-init
-
-  - name: vendor-data
-    generator: cloud-init
-
 packages:
   manager: pacman
   update: true

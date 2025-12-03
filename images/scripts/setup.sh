@@ -86,3 +86,4 @@ EOF
 systemctl enable sshd
 
 rm -rf /usr/share/doc/*
+echo "Setup complete."
