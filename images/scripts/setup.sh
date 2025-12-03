@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 USERNAME="user"
 USER_COMMENT="General User"
@@ -6,7 +6,7 @@ USER_PASSWORD="user"
 SSH_KEY="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICblPjqCTllD9zDPGS++Urlw4XqyXixufgn8iFEoDnkK"
 
 if ! id "$USERNAME" &>/dev/null; then
-    useradd -m -s /bin/bash -G wheel -c "$USER_COMMENT" "$USERNAME"
+    useradd -m -s /bin/zsh -G wheel -c "$USER_COMMENT" "$USERNAME"
     echo "User $USERNAME created."
 else
     echo "User $USERNAME already exists."
@@ -50,6 +50,7 @@ su - builder -c "cd paru-bin && makepkg -si --noconfirm"
 
 PACKAGES=(
     doasedit-alternative
+    zsh-pure-prompt
 )
 su - builder -c "paru -S --noconfirm --needed "${PACKAGES[@]}""
 su - builder -c "yes | paru -Scc"
