@@ -11,6 +11,7 @@ RUN set -eux; \
         poppler-utils\
         ghostscript\
         fonts-ibm-plex \
+        ghostscript \
         chromium \
         chromium-driver \
         chromium-l10n; \
