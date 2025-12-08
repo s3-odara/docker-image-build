@@ -103,6 +103,7 @@ jobs:
           cd repo
           
           sudo ~/go/bin/incus-simplestreams add \
+            --no-default-alias \
             --alias archlinux/latest \
             ../incus.tar.zst \
             ../rootfs.squashfs \
