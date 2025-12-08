@@ -33,7 +33,7 @@ jobs:
           sudo snap install distrobuilder --classic
 
       - name: Cache Distrobuilder Assets
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /var/cache/distrobuilder
           key: distrobuilder-${{ runner.os }}-${{ hashFiles('images/archlinux.yml') }}-${{ env.ISO_RELEASE }}
@@ -111,37 +111,7 @@ jobs:
       - name: Cleanup Old Images
         run: |
           cd repo
-          KEEP_COUNT=2
-          
-          echo "Pruning index to keep only the latest $KEEP_COUNT versions per product..."
-
-          sudo jq --argjson k "$KEEP_COUNT" '
-            .products |= with_entries(
-              .value.versions |= (
-                to_entries 
-                | sort_by(.key) 
-                | reverse 
-                | .[0:$k] 
-                | from_entries
-              )
-            )
-          ' streams/v1/images.json > images.json.tmp
-          
-          sudo cp images.json.tmp streams/v1/images.json
-          sudo rm images.json.tmp
-          echo $(sudo ~/go/bin/incus-simplestreams list)
-          
-          echo "Index updated."
-          echo "Running garbage collection for orphaned files..."
-
-          jq -r '.. | .path? | select(.)' streams/v1/images.json | sort > referenced_files.txt
-          find images -type f | sort > actual_files.txt
-          comm -23 actual_files.txt referenced_files.txt | while read -r file; do
-            echo "Deleting orphaned file: $file"
-            sudo rm -f "$file"
-          done
-
-          rm referenced_files.txt actual_files.txt
+          sudo ~/go/bin/incus-simplestreams prune --retention 2
 
       - name: Upload changes to R2
         env:
