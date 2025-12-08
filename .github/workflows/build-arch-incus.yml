@@ -129,6 +129,7 @@ jobs:
           
           sudo cp images.json.tmp streams/v1/images.json
           sudo rm images.json.tmp
+          echo $(sudo ~/go/bin/incus-simplestreams list)
           
           echo "Index updated."
           echo "Running garbage collection for orphaned files..."
