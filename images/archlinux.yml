@@ -60,6 +60,7 @@ packages:
         - zsh-completions 
         - stow
         - knot-resolver
+        - unzip
       action: install
 
 actions:
