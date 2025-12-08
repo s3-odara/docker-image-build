@@ -22,11 +22,11 @@ jobs:
           sudo apt-get install -y debootstrap rsync gpg squashfs-tools zstd
 
       - name: Setup Go and Install Tools
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: 'stable'
       - name: Install Incus Simplestreams
-        run: go install github.com/lxc/incus/cmd/incus-simplestreams@latest
+        run: go install github.com/lxc/incus/v6/cmd/incus-simplestreams@latest
 
       - name: Install Distrobuilder & Dependencies
         run: |
