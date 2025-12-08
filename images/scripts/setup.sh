@@ -80,6 +80,8 @@ sudo -u "$USERNAME" bash <<EOF
     echo "Running make stow..."
     cd "\$TARGET_DIR"
     make stow
+
+    vim -u "~/.vimrc" -i NONE -n -N -S "~/.vim/update_minpac.vim" > /dev/null 2>&1
 EOF
 
 systemctl enable sshd
