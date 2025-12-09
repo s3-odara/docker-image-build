@@ -104,5 +104,4 @@ EOF
 echo StreamLocalBindUnlink yes | sudo tee /etc/ssh/sshd_config.d/StreamLocalBindUnlink.conf > /dev/null
 systemctl enable sshd
 
-rm -rf /usr/share/doc/*
 echo "Setup complete."
