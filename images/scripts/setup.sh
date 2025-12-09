@@ -93,8 +93,8 @@ sudo -u "$USERNAME" bash <<EOF
     echo "Running make stow..."
     cd "\$TARGET_DIR"
     make stow
-    chmod 700 ~/.gnupg
-    chmod 700 ~/.ssh
+    find ~/.ssh ~/.gnupg -type d -exec chmod 700 {} +
+    find ~/.ssh ~/.gnupg -type f -exec chmod 600 {} +
     gpg --locate-keys haruta@s3-odara.net
 
     vim -u "~/.vimrc" -i NONE -n -N -S "~/.vim/update_minpac.vim" > /dev/null 2>&1
