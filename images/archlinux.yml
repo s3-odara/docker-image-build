@@ -61,6 +61,16 @@ actions:
       NoExtract = usr/share/doc/* usr/share/gtk-doc/* usr/share/help/* usr/share/info/* usr/share/man/*\
       NoExtract = usr/share/locale/*\
       NoExtract = usr/share/icons/* usr/share/themes/* usr/share/applications/* usr/share/pixmaps/* usr/share/mime/*' /etc/pacman.conf
+
+  - trigger: post-packages
+    action: |-
+      #!/bin/sh
+      umount -l /etc/resolv.conf || true
+      rm /etc/resolv.conf
+      ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+
+      # Fix ping
+      setcap cap_net_raw=ep /usr/bin/ping || chmod +s /usr/bin/ping
   - trigger: post-files
     action: |-
       #!/bin/bash
