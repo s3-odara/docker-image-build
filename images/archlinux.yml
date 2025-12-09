@@ -51,6 +51,7 @@ packages:
         - knot-resolver
         - unzip
         - pacman-contrib
+        - less
       action: install
 
 actions:
