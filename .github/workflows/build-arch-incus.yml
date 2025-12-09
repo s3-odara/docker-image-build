@@ -1,8 +1,11 @@
 name: Build Arch Linux Incus Image
 
 on:
+  schedule:
+    - cron: "17 20 * * 4"
   push:
     paths:
+      - '.github/workflows/build-arch-incus.yml'
       - 'images/archlinux.yml'
       - 'images/scripts/**'
   workflow_dispatch:
@@ -19,7 +22,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y debootstrap rsync gpg squashfs-tools zstd
+          sudo apt-get install -y zstd distrobuilder
 
       - name: Setup Go and Install Tools
         uses: actions/setup-go@v6
@@ -84,7 +87,6 @@ jobs:
 
       - name: Fix Cache Permissions
         run: |
-          sudo rm -rf /var/cache/distrobuilder/rootfs
           sudo chown -R $USER:$USER /var/cache/distrobuilder
 
       - name: Sync current repo from R2
