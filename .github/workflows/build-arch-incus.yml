@@ -13,27 +13,22 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+      options: --privileged
     environment: cloudflare-r2-filess3-odaranet
 
     steps:
+      - name: Install System Dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm git go zstd distrobuilder aws-cli squashfs-tools rsync curl unzip
+
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y zstd distrobuilder
-
-      - name: Setup Go and Install Tools
-        uses: actions/setup-go@v6
-        with:
-          go-version: 'stable'
       - name: Install Incus Simplestreams
         run: go install github.com/lxc/incus/v6/cmd/incus-simplestreams@latest
-
-      - name: Install Distrobuilder & Dependencies
-        run: |
-          sudo snap install distrobuilder --classic
 
       - name: Cache Distrobuilder Assets
         uses: actions/cache@v4
@@ -74,9 +69,9 @@ jobs:
 
       - name: Build Incus Image
         run: |
-          sudo mkdir -p /var/cache/distrobuilder
+          mkdir -p /var/cache/distrobuilder
 
-          sudo distrobuilder build-incus images/archlinux.yml \
+          distrobuilder build-incus images/archlinux.yml \
             --cache-dir /var/cache/distrobuilder \
             --cleanup=false \
             -o image.release=${{ env.ISO_RELEASE }} \
@@ -84,10 +79,6 @@ jobs:
             -o image.architecture=x86_64 \
             -o image.variant=default \
             --compression zstd
-
-      - name: Fix Cache Permissions
-        run: |
-          sudo chown -R $USER:$USER /var/cache/distrobuilder
 
       - name: Sync current repo from R2
         env:
@@ -104,7 +95,7 @@ jobs:
         run: |
           cd repo
           
-          sudo ~/go/bin/incus-simplestreams add \
+          ~/go/bin/incus-simplestreams add \
             --no-default-alias \
             --alias archlinux/latest \
             ../incus.tar.zst \
@@ -113,7 +104,7 @@ jobs:
       - name: Cleanup Old Images
         run: |
           cd repo
-          sudo ~/go/bin/incus-simplestreams prune --retention 2
+          ~/go/bin/incus-simplestreams prune --retention 2
 
       - name: Upload changes to R2
         env:
