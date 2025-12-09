@@ -27,9 +27,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Install Incus Simplestreams
-        run: go install github.com/lxc/incus/v6/cmd/incus-simplestreams@latest
-
       - name: Generate Build Variables
         id: vars
         run: |
@@ -87,7 +84,7 @@ jobs:
         run: |
           cd repo
 
-          ~/go/bin/incus-simplestreams add \
+          incus-simplestreams add \
             --no-default-alias \
             --alias archlinux/latest \
             ../incus.tar.zst \
@@ -96,7 +93,7 @@ jobs:
       - name: Cleanup Old Images
         run: |
           cd repo
-          ~/go/bin/incus-simplestreams prune --retention 1
+          incus-simplestreams prune --retention 1
 
       - name: Upload changes to R2
         env:
