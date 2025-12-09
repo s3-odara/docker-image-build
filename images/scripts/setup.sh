@@ -21,6 +21,8 @@ chmod 700 "$SSH_DIR"
 chmod 600 "$SSH_DIR/authorized_keys"
 chown -R "$USERNAME:$USERNAME" "$SSH_DIR"
 
+ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+
 ln -sf /usr/share/zoneinfo/Asia/Tokyo /etc/localtime
 
 sed -i 's/#en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
@@ -91,10 +93,14 @@ sudo -u "$USERNAME" bash <<EOF
     echo "Running make stow..."
     cd "\$TARGET_DIR"
     make stow
+    chmod 700 ~/.gnupg
+    chmod 700 ~/.ssh
+    gpg --locate-keys haruta@s3-odara.net
 
     vim -u "~/.vimrc" -i NONE -n -N -S "~/.vim/update_minpac.vim" > /dev/null 2>&1
 EOF
 
+echo StreamLocalBindUnlink yes | sudo tee /etc/ssh/sshd_config.d/StreamLocalBindUnlink.conf > /dev/null
 systemctl enable sshd
 
 rm -rf /usr/share/doc/*
