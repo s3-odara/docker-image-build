@@ -57,7 +57,7 @@ packages:
 actions:
   - trigger: post-unpack
     action: |-
-      #!/bin/bash
+      #!/bin/bash -x
       sed -i '/^\[options\]/a \
       NoExtract = usr/share/doc/* usr/share/gtk-doc/* usr/share/help/* usr/share/info/* usr/share/man/*\
       NoExtract = usr/share/locale/*\
@@ -65,7 +65,7 @@ actions:
 
   - trigger: post-packages
     action: |-
-      #!/bin/sh
+      #!/bin/sh -x
       umount -l /etc/resolv.conf || true
       rm /etc/resolv.conf
       ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
@@ -74,6 +74,6 @@ actions:
       setcap cap_net_raw=ep /usr/bin/ping || chmod +s /usr/bin/ping
   - trigger: post-files
     action: |-
-      #!/bin/bash
+      #!/bin/bash -x
       /root/setup.sh
       rm /root/setup.sh
