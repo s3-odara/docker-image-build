@@ -50,6 +50,7 @@ packages:
         - stow
         - knot-resolver
         - unzip
+        - pacman-contrib
       action: install
 
 actions:
