@@ -31,16 +31,21 @@ locale-gen
 echo "LANG=en_US.UTF-8" > /etc/locale.conf
 
 sed -i \
-    -e 's/CFLAGS="-march=x86-64/CFLAGS="-march=native/' \
+    -e 's/CFLAGS="-march=x86-64/CFLAGS="-march=x86-64-v3/' \
     -e '/^LDFLAGS=/ s/"$/ -fuse-ld=mold"/' \
-    -e '/^LTOFLAGS=/a RUSTFLAGS="-C opt-level=3 -C link-arg=-fuse-ld=mold -C target-cpu=native"' \
-    -e 's/#MAKEFLAGS="-j2"/MAKEFLAGS="-j16"/' \
-    -e '/^BUILDENV=/ s/!ccache/ccache/' \
+    -e '/^LTOFLAGS=/a RUSTFLAGS="-C opt-level=3 -C link-arg=-fuse-ld=mold -C target-cpu=x86-64-v3"' \
+    -e "s/#MAKEFLAGS=\"-j2\"/MAKEFLAGS=\"-j$(nproc)\"/" \
     /etc/makepkg.conf
 
-curl -s "https://archlinux.org/mirrorlist/?protocol=https&use_mirror_status=on" | \
-        sed -e 's/^#Server/Server/' -e '/^#/d' | \
-            head -n 50 > /etc/pacman.d/mirrorlist
+
+# pacman
+sed -i \
+    -e 's/^#Color/Color/' \
+    -e 's/^ParallelDownloads = 5/ParallelDownloads = 10/' \
+    /etc/pacman.conf
+
+curl -s "https://archlinux.org/mirrorlist/?country=JP&protocol=https" | \
+    sed -e 's/^#Server/Server/' -e '/^#/d' | rankmirrors -v - > /etc/pacman.d/mirrorlist
 
 useradd -m builder
 echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
@@ -53,8 +58,14 @@ sudo -u builder bash -c "paru -S --noconfirm --needed $PACKAGES"
 
 sudo -u builder bash -c "yes | paru -Scc"
 
-
 userdel -r builder
+
+sed -i \
+    -e 's/CFLAGS="-march=x86-64-v3/CFLAGS="-march=native/' \
+    -e 's/RUSTFLAGS="-C opt-level=3 -C link-arg=-fuse-ld=mold -C target-cpu=x86-64-v3"/RUSTFLAGS="-C opt-level=3 -C link-arg=-fuse-ld=mold -C target-cpu=native"/' \
+    -e "s/#MAKEFLAGS=\"-j$(nproc)\"/MAKEFLAGS=\"-j16\"/" \
+    -e '/^BUILDENV=/ s/!ccache/ccache/' \
+    /etc/makepkg.conf
 
 cat <<EOF > /etc/doas.conf
 permit nopass :wheel
