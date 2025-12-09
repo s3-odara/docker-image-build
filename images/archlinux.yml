@@ -56,14 +56,10 @@ actions:
   - trigger: post-unpack
     action: |-
       #!/bin/bash
-      sed -i '/^NoExtract/d' /etc/pacman.conf
-
-      cat <<EOF >> /etc/pacman.conf
-
-      NoExtract = usr/share/doc/* usr/share/gtk-doc/* usr/share/help/* usr/share/info/* usr/share/man/*
-      NoExtract = usr/share/locale/*
-      NoExtract = usr/share/icons/* usr/share/themes/* usr/share/applications/* usr/share/pixmaps/* usr/share/mime/*
-      EOF
+      sed -i '/^\[options\]/a \
+      NoExtract = usr/share/doc/* usr/share/gtk-doc/* usr/share/help/* usr/share/info/* usr/share/man/*\
+      NoExtract = usr/share/locale/*\
+      NoExtract = usr/share/icons/* usr/share/themes/* usr/share/applications/* usr/share/pixmaps/* usr/share/mime/*' /etc/pacman.conf
   - trigger: post-files
     action: |-
       #!/bin/bash

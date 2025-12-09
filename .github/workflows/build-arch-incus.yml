@@ -104,7 +104,7 @@ jobs:
       - name: Cleanup Old Images
         run: |
           cd repo
-          ~/go/bin/incus-simplestreams prune --retention 2
+          ~/go/bin/incus-simplestreams prune --retention 1
 
       - name: Upload changes to R2
         env:
