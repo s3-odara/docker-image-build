@@ -27,7 +27,7 @@ packages:
   manager: pacman
   update: true
   cleanup: true
-  
+
   sets:
     - packages:
         - base
@@ -46,7 +46,7 @@ packages:
         - doas
         - mold
         - ccache
-        - zsh-completions 
+        - zsh-completions
         - stow
         - knot-resolver
         - unzip
@@ -77,4 +77,3 @@ actions:
       #!/bin/bash
       /root/setup.sh
       rm /root/setup.sh
-

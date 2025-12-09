@@ -2,13 +2,13 @@ name: Build and Push Docker Image
 
 on:
   schedule:
-      - cron: "17 20 * * 0,3"
+    - cron: "17 20 * * 0,3"
 
   push:
     branches:
       - master
     paths:
-      - 'Dockerfile'
+      - "Dockerfile"
   workflow_dispatch:
 
 jobs:
