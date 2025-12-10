@@ -1,0 +1,85 @@
+name: Build Arch Linux ARM64 Incus Image
+
+on:
+  schedule:
+    - cron: "17 20 * * 4"
+  push:
+    paths:
+      # このファイル自身のパスを指定（ファイル名に合わせて変更してください）
+      - ".github/workflows/build-arch-incus-arm64.yml"
+      - "images/archlinux.yml"
+      - "images/scripts/**"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+      options: --privileged
+    environment: cloudflare-r2-filess3-odaranet
+
+    steps:
+      - name: Install System Dependencies
+        run: |
+          pacman -Syu --noconfirm
+          # qemu-user-static を追加して、x86環境でARMバイナリを扱えるようにします
+          pacman -S --noconfirm git go zstd distrobuilder aws-cli squashfs-tools rsync curl unzip qemu-user-static
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install Incus Simplestreams
+        run: go install github.com/lxc/incus/v6/cmd/incus-simplestreams@latest
+
+      - name: Build Incus Image (ARM64)
+        run: |
+          mkdir -p /var/cache/distrobuilder
+
+          # アーキテクチャを aarch64 に変更
+          distrobuilder build-incus images/archlinuxarm.yml \
+            --cache-dir /var/cache/distrobuilder \
+            --cleanup=false \
+            -o image.architecture=aarch64 \
+            -o image.variant=default \
+            --compression zstd
+
+      - name: Sync current repo from R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ENDPOINT_URL: https://6ecd930c8cd4dc63f87c9398762626e8.r2.cloudflarestorage.com
+          R2_BUCKET_PATH: s3://filess3-odaranet/pub/container-arm64
+        run: |
+          mkdir -p repo
+          aws s3 sync "$R2_BUCKET_PATH" ./repo --endpoint-url "$R2_ENDPOINT_URL" || true
+
+      - name: Add Image to Repository
+        run: |
+          cd repo
+
+          # 同じエイリアスを使用することで、Incus側がアーキテクチャを自動判別可能なマルチアーキテクチャ構成になります
+          ~/go/bin/incus-simplestreams add \
+            --no-default-alias \
+            --alias archlinux/latest \
+            ../incus.tar.zst \
+            ../rootfs.squashfs \
+
+      - name: Cleanup Old Images
+        run: |
+          cd repo
+          # pruneはアーキテクチャごとに動作するか確認が必要ですが、通常はmetadata.jsonに基づいて処理されます
+          ~/go/bin/incus-simplestreams prune --retention 0
+
+      - name: Upload changes to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ENDPOINT_URL: https://6ecd930c8cd4dc63f87c9398762626e8.r2.cloudflarestorage.com
+          R2_BUCKET_PATH: filess3-odaranet/pub/container-arm64
+        run: |
+          aws s3 sync ./repo "s3://$R2_BUCKET_PATH" \
+            --endpoint-url "$R2_ENDPOINT_URL" \
+            --delete

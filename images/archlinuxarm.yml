@@ -1,0 +1,94 @@
+image:
+  distribution: archlinux
+  description: Arch Linux Custom Image
+  architecture: x86_64
+
+source:
+  downloader: archlinux-http
+  url: http://os.archlinuxarm.org
+
+files:
+  - generator: dump
+    path: /etc/systemd/network/eth0.network
+    content: |-
+      [Match]
+      Name=eth0
+
+      [Network]
+      DHCP=yes
+  - generator: copy
+    source: ./images/scripts/setup.sh
+    path: /root/setup.sh
+    mode: 0755
+
+packages:
+  manager: pacman
+  update: true
+  cleanup: true
+
+  sets:
+    - packages:
+        - base
+        - base-devel
+        - vi
+        - tmux
+        - gnupg
+        - zsh
+        - zsh-syntax-highlighting
+        - zsh-autosuggestions
+        - git
+        - vim
+        - wget
+        - curl
+        - openssh
+        - doas
+        - mold
+        - ccache
+        - zsh-completions
+        - stow
+        - knot-resolver
+        - unzip
+        - pacman-contrib
+        - less
+        - bc
+        - tcpdump
+        - strace
+        - htop
+        - ed
+      action: install
+
+actions:
+  - trigger: post-unpack
+    action: |-
+      #!/bin/bash -x
+      sed -i '/^\[options\]/a \
+      NoExtract = usr/share/doc/* usr/share/gtk-doc/* usr/share/help/* usr/share/info/* usr/share/man/*\
+      NoExtract = usr/share/locale/*\
+      NoExtract = usr/share/icons/* usr/share/themes/* usr/share/applications/* usr/share/pixmaps/* usr/share/mime/*' /etc/pacman.conf
+
+  - trigger: post-packages
+    action: |-
+      #!/bin/sh -x
+      umount -l /etc/resolv.conf || true
+      rm /etc/resolv.conf
+      ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+
+      # Fix ping
+      setcap cap_net_raw=ep /usr/bin/ping || chmod +s /usr/bin/ping
+  - trigger: post-files
+    action: |-
+      #!/bin/bash -x
+      /root/setup.sh
+      rm /root/setup.sh
+      # ドキュメント、マニュアル、ヘルプファイルを削除
+      rm -rf /usr/share/doc/* /usr/share/gtk-doc/* /usr/share/help/* /usr/share/info/* /usr/share/man/*
+      find /usr/share/locale -mindepth 1 -maxdepth 1 -type d -not -name 'en' -not -name 'ja' -exec rm -rf {} + &&
+      rm -rf /usr/share/icons/* /usr/share/themes/* /usr/share/applications/* /usr/share/pixmaps/* /usr/share/mime/*
+
+  - packages:
+    - linux-aarch64
+    action: remove
+    architectures:
+    - aarch64
+    types:
+    - container
