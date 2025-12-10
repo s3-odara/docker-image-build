@@ -52,6 +52,7 @@ packages:
         - less
         - bc
         - tcpdump
+        - linux-aarch64
         - strace
         - htop
         - ed
@@ -85,10 +86,3 @@ actions:
       find /usr/share/locale -mindepth 1 -maxdepth 1 -type d -not -name 'en' -not -name 'ja' -exec rm -rf {} + &&
       rm -rf /usr/share/icons/* /usr/share/themes/* /usr/share/applications/* /usr/share/pixmaps/* /usr/share/mime/*
 
-  - packages:
-    - linux-aarch64
-    action: remove
-    architectures:
-    - aarch64
-    types:
-    - container
