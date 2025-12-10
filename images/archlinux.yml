@@ -54,9 +54,9 @@ packages:
         - less
         - bc
         - tcpdump
-        - lldb
         - strace
         - htop
+        - ed
       action: install
 
 actions:
