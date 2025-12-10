@@ -52,6 +52,11 @@ packages:
         - unzip
         - pacman-contrib
         - less
+        - bc
+        - tcpdump
+        - lldb
+        - strace
+        - htop
       action: install
 
 actions:
