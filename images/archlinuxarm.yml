@@ -61,6 +61,10 @@ packages:
         - ed
       action: install
 
+repositories:
+  - name: core
+    url: http://mirror.archlinuxarm.org/$arch/$repo
+
 actions:
   - trigger: post-unpack
     action: |-
