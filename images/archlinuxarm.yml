@@ -8,6 +8,8 @@ source:
   url: http://os.archlinuxarm.org
   keys:
     - 68B3537F39A313B3E574D06777193F152BDBE6A6
+  keyserver:
+    - https://keyserver.ubuntu.com/
 
 files:
   - generator: dump
