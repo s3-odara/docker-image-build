@@ -24,7 +24,7 @@ jobs:
         run: |
           pacman -Syu --noconfirm
           # qemu-user-static を追加して、x86環境でARMバイナリを扱えるようにします
-          pacman -S --noconfirm git go zstd distrobuilder aws-cli squashfs-tools rsync curl unzip qemu-user-static
+          pacman -S --noconfirm git go zstd distrobuilder aws-cli squashfs-tools rsync curl unzip qemu-user-static qemu-user-static-binfmt
           /usr/lib/systemd/systemd-binfmt
 
       - name: Checkout repository
