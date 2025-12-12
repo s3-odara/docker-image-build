@@ -1,7 +1,7 @@
 image:
   distribution: archlinux
   description: Arch Linux Custom Image
-  architecture: x86_64
+  architecture: aarch64
 
 source:
   downloader: archlinux-http
@@ -101,3 +101,5 @@ actions:
       find /usr/share/locale -mindepth 1 -maxdepth 1 -type d -not -name 'en' -not -name 'ja' -exec rm -rf {} + &&
       rm -rf /usr/share/icons/* /usr/share/themes/* /usr/share/applications/* /usr/share/pixmaps/* /usr/share/mime/*
 
+mappings:
+  architecture_map: archlinux
