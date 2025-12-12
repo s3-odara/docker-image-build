@@ -41,6 +41,7 @@ jobs:
             archlinux:base-devel \
             /bin/bash -cx '
               set -e
+              echo "Server = http://nj.us.mirror.archlinuxarm.org/\$arch/\$repo" > /etc/pacman.d/mirrorlist
 
               echo "=== 1. Install Dependencies ==="
               pacman -Syu --noconfirm
