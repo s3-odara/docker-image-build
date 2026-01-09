@@ -52,13 +52,13 @@ curl -s "https://archlinux.org/mirrorlist/?country=JP&protocol=https" | \
 useradd -m builder
 echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
 
-su - builder -c "git clone https://aur.archlinux.org/paru-bin.git"
-su - builder -c "cd paru-bin && makepkg -si --noconfirm"
+su - builder -c "git clone https://aur.archlinux.org/yay-bin.git"
+su - builder -c "cd yay-bin && makepkg -si --noconfirm"
 
 PACKAGES="doasedit-alternative zsh-pure-prompt"
-sudo -u builder bash -c "paru -S --noconfirm --needed $PACKAGES"
+sudo -u builder bash -c "yay -S --noconfirm --needed $PACKAGES"
 
-sudo -u builder bash -c "yes | paru -Scc"
+sudo -u builder bash -c "yes | yay -Scc"
 
 userdel -r builder
 
