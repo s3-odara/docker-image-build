@@ -22,7 +22,7 @@ jobs:
       - name: Install System Dependencies
         run: |
           pacman -Syu --noconfirm
-          pacman -S --noconfirm git go zstd distrobuilder aws-cli squashfs-tools rsync curl unzip
+          pacman -S --noconfirm git go zstd distrobuilder aws-cli squashfs-tools rsync curl unzip jq
 
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -91,7 +91,12 @@ jobs:
             --no-default-alias \
             --alias archlinux/latest \
             ../incus.tar.zst \
-            ../rootfs.squashfs \
+            ../rootfs.squashfs
+
+      - name: Prune Old Products (keep newest per OS/variant/arch)
+        run: |
+          cd repo
+          bash ../images/scripts/simplestreams-prune-products.sh
 
       - name: Cleanup Old Images
         run: |
