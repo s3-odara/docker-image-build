@@ -92,10 +92,8 @@ sudo -u "$USERNAME" bash <<EOF
 
     echo "Running make stow..."
     cd "\$TARGET_DIR"
-    make stow
+    make bootstrap stow-arch
     cd home
-    find .ssh .gnupg -type d -exec chmod 700 {} +
-    find .ssh .gnupg -type f -exec chmod 600 {} +
     gpg --locate-keys haruta@s3-odara.net
 
     vim -u "/home/$USERNAME/.vimrc" -i NONE -n -N -S "/home/$USERNAME/.vim/update_minpac.vim"
