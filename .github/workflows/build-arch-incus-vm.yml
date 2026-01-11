@@ -43,7 +43,7 @@ jobs:
           set -euo pipefail
           pacman -Syu --noconfirm
           pacman -S --noconfirm git go zstd distrobuilder aws-cli squashfs-tools rsync curl unzip jq \
-            qemu-kvm dosfstools btrfs-progs
+            qemu-base dosfstools btrfs-progs
 
       - name: Checkout repository
         uses: actions/checkout@v6

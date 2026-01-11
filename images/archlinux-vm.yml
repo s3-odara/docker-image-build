@@ -49,6 +49,27 @@ files:
       GRUB_TERMINAL=console
     types:
       - vm
+  # NOTE: Do not expose 3389/tcp directly; use an Incus proxy device or SSH tunnel to keep it host-local.
+  - generator: dump
+    path: /etc/systemd/system/weston-rdp.service
+    content: |-
+      [Unit]
+      Description=Weston RDP backend (headless)
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=simple
+      RuntimeDirectory=weston
+      RuntimeDirectoryMode=0700
+      Environment=XDG_RUNTIME_DIR=/run/weston
+      ExecStart=/usr/bin/weston --backend=rdp --shell=desktop-shell.so --renderer=pixman --address=0.0.0.0 --port=3389 --rdp-tls-key=/etc/weston-rdp/tls.key --rdp-tls-cert=/etc/weston-rdp/tls.crt
+      Restart=on-failure
+
+      [Install]
+      WantedBy=multi-user.target
+    types:
+      - vm
   - generator: copy
     source: ./images/scripts/setup.sh
     path: /root/setup.sh
@@ -91,6 +112,10 @@ packages:
         - grub
         - cloud-guest-utils
         - linux
+        - weston
+        - freerdp
+        - openssl
+        - ttf-dejavu
       action: install
 
 actions:
@@ -144,6 +169,23 @@ actions:
           find "$dir" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
         fi
       done
+
+  - trigger: post-files
+    action: |-
+      #!/bin/sh -eu
+      install -d -m 0700 /etc/weston-rdp
+      if [ ! -s /etc/weston-rdp/tls.key ] || [ ! -s /etc/weston-rdp/tls.crt ]; then
+        umask 077
+        openssl req -x509 -newkey rsa:2048 -nodes -sha256 -days 3650 \
+          -subj "/CN=incus-vm" \
+          -keyout /etc/weston-rdp/tls.key \
+          -out /etc/weston-rdp/tls.crt
+      fi
+      chmod 0600 /etc/weston-rdp/tls.key
+      chmod 0644 /etc/weston-rdp/tls.crt
+      systemctl enable weston-rdp.service
+    types:
+      - vm
 
   - trigger: post-files
     action: |-
