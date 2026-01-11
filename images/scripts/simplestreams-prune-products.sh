@@ -37,7 +37,10 @@ jq -r '
   | @tsv
 ' "$IMAGES_JSON" | sed 's/^/  /'
 
-# keep: newest product per (os, variant, arch, type). newest decided by max(version-key).
+# keep: newest product per (os, variant, arch, type), but keep only ONE vm overall.
+# newest decided by max(version-key).
+# NOTE: This script only deletes products. Variant/version pruning is handled later
+# by `incus-simplestreams prune --retention X`.
 keep_json="$(
   jq -c '
     def pitems($p):
@@ -49,7 +52,11 @@ keep_json="$(
       | if . then "vm" else "container" end;
 
     def gkey($p):
-      (($p.value.os // "") + "|" + ($p.value.variant // "") + "|" + ($p.value.arch // $p.value.architecture // "") + "|" + (ptype($p)));
+      if (ptype($p)) == "vm" then
+        "vm"
+      else
+        (($p.value.os // "") + "|" + ($p.value.variant // "") + "|" + ($p.value.arch // $p.value.architecture // "") + "|container")
+      end;
 
     def maxver($p):
       (((($p.value.versions // {}) | keys | max) // ""));
