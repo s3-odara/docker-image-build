@@ -60,6 +60,9 @@ jobs:
           echo "ISO_RELEASE=$ISO_RELEASE" >> $GITHUB_ENV
 
       - name: Build Incus Image
+        env:
+          USER_PASSWORD: ${{ secrets.INCUS_USER_PASSWORD }}
+          SSH_KEY: ${{ secrets.INCUS_SSH_KEY }}
         run: |
           mkdir -p /var/cache/distrobuilder
 

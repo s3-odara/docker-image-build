@@ -62,27 +62,46 @@ packages:
 actions:
   - trigger: post-unpack
     action: |-
-      #!/bin/bash -x
-      sed -i '/^\[options\]/a \
-      NoExtract = usr/share/doc/* usr/share/gtk-doc/* usr/share/help/* usr/share/info/* usr/share/man/*\
-      NoExtract = usr/share/locale/*\
-      NoExtract = usr/share/icons/* usr/share/themes/* usr/share/applications/* usr/share/pixmaps/* usr/share/mime/*' /etc/pacman.conf
+      #!/bin/sh -eu
+      if ! grep -q '^Include = /etc/pacman.d/noextract.conf' /etc/pacman.conf; then
+        sed -i '/^\[options\]/a Include = /etc/pacman.d/noextract.conf' /etc/pacman.conf
+      fi
+      cat >/etc/pacman.d/noextract.conf <<'EOF'
+      NoExtract = usr/share/doc/* usr/share/gtk-doc/* usr/share/help/* usr/share/info/* usr/share/man/*
+      NoExtract = usr/share/locale/*
+      NoExtract = !usr/share/locale/locale.alias
+      NoExtract = usr/share/icons/* usr/share/themes/* usr/share/applications/* usr/share/pixmaps/* usr/share/mime/*
+      EOF
 
   - trigger: post-packages
     action: |-
-      #!/bin/sh -x
+      #!/bin/sh -eu
       umount -l /etc/resolv.conf || true
-      rm /etc/resolv.conf
-      ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+      rm -f /etc/resolv.conf
+      if [ -e /run/systemd/resolve/stub-resolv.conf ]; then
+        ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+      fi
 
       # Fix ping
       setcap cap_net_raw=ep /usr/bin/ping || chmod +s /usr/bin/ping
   - trigger: post-files
     action: |-
-      #!/bin/bash -x
-      /root/setup.sh
-      rm /root/setup.sh
+      #!/bin/sh -eu
+      if [ -x /root/setup.sh ]; then
+        /root/setup.sh
+        rm -f /root/setup.sh
+      fi
       # ドキュメント、マニュアル、ヘルプファイルを削除
-      rm -rf /usr/share/doc/* /usr/share/gtk-doc/* /usr/share/help/* /usr/share/info/* /usr/share/man/*
-      find /usr/share/locale -mindepth 1 -maxdepth 1 -type d -not -name 'en' -not -name 'ja' -exec rm -rf {} + &&
-      rm -rf /usr/share/icons/* /usr/share/themes/* /usr/share/applications/* /usr/share/pixmaps/* /usr/share/mime/*
+      for dir in /usr/share/doc /usr/share/gtk-doc /usr/share/help /usr/share/info /usr/share/man; do
+        if [ -d "$dir" ]; then
+          find "$dir" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+        fi
+      done
+      if [ -d /usr/share/locale ]; then
+        find /usr/share/locale -mindepth 1 -maxdepth 1 -type d ! -name 'en' ! -name 'ja' -exec rm -rf -- {} + || true
+      fi
+      for dir in /usr/share/icons /usr/share/themes /usr/share/applications /usr/share/pixmaps /usr/share/mime; do
+        if [ -d "$dir" ]; then
+          find "$dir" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+        fi
+      done
