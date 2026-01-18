@@ -1,0 +1,186 @@
+name: Build Arch Linux Incus VM Image
+
+on:
+  schedule:
+    - cron: "17 20 * * 4"
+  push:
+    paths:
+      - ".github/workflows/build-arch-incus-vm.yml"
+      - "images/archlinux-vm.yml"
+      - "images/scripts/**"
+  workflow_dispatch:
+    inputs:
+      iso_release:
+        description: "Arch ISO release date (YYYY.MM.DD). Empty = latest from archive."
+        required: false
+        type: string
+      incus_version:
+        description: "incus-simplestreams version (e.g. v6.0.0). Empty = latest tag."
+        required: false
+        type: string
+
+concurrency:
+  group: arch-incus-vm-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+      options: --privileged
+    environment: cloudflare-r2-filess3-odaranet
+    permissions:
+      contents: read
+
+    steps:
+      - name: Install System Dependencies
+        run: |
+          set -euo pipefail
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm git go zstd distrobuilder aws-cli squashfs-tools rsync curl unzip jq \
+            qemu-base dosfstools btrfs-progs
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Cache distrobuilder and Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            /var/cache/distrobuilder
+            /root/go/pkg/mod
+          key: arch-incus-vm-${{ runner.os }}-${{ hashFiles('images/**', '.github/workflows/build-arch-incus-vm.yml') }}
+
+      - name: Generate Build Variables
+        id: vars
+        run: |
+          set -euo pipefail
+          BUILD_SERIAL="$(date -u +%Y%m%d_%H%M)"
+
+          INPUT_RELEASE="${{ github.event.inputs.iso_release }}"
+          INPUT_INCUS_VERSION="${{ github.event.inputs.incus_version }}"
+
+          if [ -n "$INPUT_RELEASE" ]; then
+            ISO_RELEASE="$INPUT_RELEASE"
+            echo "Using manual input: $ISO_RELEASE"
+          else
+            echo "Fetching latest ISO release date from archive.archlinux.org..."
+
+            LATEST_DATE=$(curl -fsSL --retry 5 --retry-delay 2 https://archive.archlinux.org/iso/ | \
+                          grep -oE '[0-9]{4}\.[0-9]{2}\.[0-9]{2}' | \
+                          sort -Vu | \
+                          tail -n 1)
+
+            if [ -z "$LATEST_DATE" ]; then
+              echo "::error::Failed to fetch latest ISO date from archive.archlinux.org"
+              exit 1
+            else
+              ISO_RELEASE="$LATEST_DATE"
+            fi
+            echo "Detected latest release: $ISO_RELEASE"
+          fi
+
+          if [ -n "$INPUT_INCUS_VERSION" ]; then
+            INCUS_VERSION="$INPUT_INCUS_VERSION"
+          else
+            INCUS_VERSION="$(go list -m -versions github.com/lxc/incus/v6 | awk '{print $NF}')"
+          fi
+          if [ -z "$INCUS_VERSION" ]; then
+            echo "::error::Failed to determine incus-simplestreams version"
+            exit 1
+          fi
+          echo "Using incus-simplestreams: $INCUS_VERSION"
+
+          {
+            echo "iso_release=$ISO_RELEASE"
+            echo "build_serial=$BUILD_SERIAL"
+            echo "incus_version=$INCUS_VERSION"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Install Incus Simplestreams
+        run: |
+          set -euo pipefail
+          export GOPATH=/root/go
+          export PATH="$PATH:$GOPATH/bin"
+          go install "github.com/lxc/incus/v6/cmd/incus-simplestreams@${{ steps.vars.outputs.incus_version }}"
+
+      - name: Build Incus VM Image
+        env:
+          USER_PASSWORD: ${{ secrets.INCUS_USER_PASSWORD }}
+          SSH_KEY: ${{ secrets.INCUS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          export GOPATH=/root/go
+          export PATH="$PATH:$GOPATH/bin"
+          mkdir -p /var/cache/distrobuilder
+
+          distrobuilder build-incus images/archlinux-vm.yml \
+            --vm \
+            --cache-dir /var/cache/distrobuilder \
+            --cleanup=false \
+            -o image.release=${{ steps.vars.outputs.iso_release }} \
+            -o image.serial=${{ steps.vars.outputs.build_serial }} \
+            -o image.architecture=x86_64 \
+            -o image.variant=default \
+            --compression zstd
+          test -s incus.tar.zst
+          test -s disk.qcow2
+
+      - name: Sync current repo from R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ENDPOINT_URL: https://6ecd930c8cd4dc63f87c9398762626e8.r2.cloudflarestorage.com
+          R2_BUCKET_PATH: s3://filess3-odaranet/pub/container
+        run: |
+          set -euo pipefail
+          mkdir -p repo
+          if ! aws s3 sync "$R2_BUCKET_PATH" ./repo --endpoint-url "$R2_ENDPOINT_URL"; then
+            echo "::warning::Failed to sync existing repository from R2 (continuing with empty repo)."
+          fi
+
+      - name: Add Image to Repository
+        run: |
+          set -euo pipefail
+          export GOPATH=/root/go
+          export PATH="$PATH:$GOPATH/bin"
+          cd repo
+
+          incus-simplestreams add \
+            --no-default-alias \
+            --alias archlinux/vm \
+            ../incus.tar.zst \
+            ../disk.qcow2
+
+      - name: Prune Old Products (keep newest per OS/variant/arch)
+        run: |
+          set -euo pipefail
+          cd repo
+          bash ../images/scripts/simplestreams-prune-products.sh
+
+      - name: Cleanup Old Images
+        run: |
+          set -euo pipefail
+          export GOPATH=/root/go
+          export PATH="$PATH:$GOPATH/bin"
+          cd repo
+          incus-simplestreams prune --retention 1
+
+      - name: Upload changes to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ENDPOINT_URL: https://6ecd930c8cd4dc63f87c9398762626e8.r2.cloudflarestorage.com
+          R2_BUCKET_PATH: filess3-odaranet/pub/container
+        run: |
+          set -euo pipefail
+          aws s3 sync ./repo "s3://$R2_BUCKET_PATH" \
+            --endpoint-url "$R2_ENDPOINT_URL" \
+            --delete
