@@ -107,12 +107,6 @@ su - builder -c "yay -S --noconfirm --needed $PACKAGES"
 su - builder -c "yes | yay -Scc" || true
 
 # Work around pacman cache cleanup failures when download directories exist.
-if [ -d /var/cache/pacman/pkg ]; then
-    find /var/cache/pacman/pkg -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-fi
-if [ -d /var/lib/pacman/sync ]; then
-    find /var/lib/pacman/sync -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-fi
 
 userdel -r builder
 
