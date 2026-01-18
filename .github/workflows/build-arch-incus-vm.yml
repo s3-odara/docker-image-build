@@ -110,6 +110,9 @@ jobs:
           go install "github.com/lxc/incus/v6/cmd/incus-simplestreams@${{ steps.vars.outputs.incus_version }}"
 
       - name: Build Incus VM Image
+        env:
+          USER_PASSWORD: ${{ secrets.INCUS_USER_PASSWORD }}
+          SSH_KEY: ${{ secrets.INCUS_SSH_KEY }}
         run: |
           set -euo pipefail
           export GOPATH=/root/go
