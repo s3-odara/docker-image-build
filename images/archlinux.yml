@@ -22,6 +22,10 @@ files:
     source: ./images/scripts/setup.sh
     path: /root/setup.sh
     mode: 0755
+  - generator: copy
+    source: ./images/scripts/remove-docs.sh
+    path: /root/remove-docs.sh
+    mode: 0755
 
 packages:
   manager: pacman
@@ -91,17 +95,7 @@ actions:
         /root/setup.sh
         rm -f /root/setup.sh
       fi
-      # ドキュメント、マニュアル、ヘルプファイルを削除
-      for dir in /usr/share/doc /usr/share/gtk-doc /usr/share/help /usr/share/info /usr/share/man; do
-        if [ -d "$dir" ]; then
-          find "$dir" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
-        fi
-      done
-      if [ -d /usr/share/locale ]; then
-        find /usr/share/locale -mindepth 1 -maxdepth 1 -type d ! -name 'en' ! -name 'ja' -exec rm -rf -- {} + || true
+      if [ -x /root/remove-docs.sh ]; then
+        /root/remove-docs.sh
+        rm -f /root/remove-docs.sh
       fi
-      for dir in /usr/share/icons /usr/share/themes /usr/share/applications /usr/share/pixmaps /usr/share/mime; do
-        if [ -d "$dir" ]; then
-          find "$dir" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
-        fi
-      done
