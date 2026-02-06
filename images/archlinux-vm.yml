@@ -120,6 +120,9 @@ packages:
         - freerdp
         - openssl
         - ttf-dejavu
+        - xmllint
+        - ripgrep
+        - html-xml-utils
       action: install
 
 actions:
