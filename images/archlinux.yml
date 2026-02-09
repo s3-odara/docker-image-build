@@ -61,7 +61,7 @@ packages:
         - strace
         - htop
         - ed
-        - xmllint
+        - libxml2
         - ripgrep
         - html-xml-utils
       action: install
