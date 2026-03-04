@@ -77,7 +77,10 @@ actions:
       NoExtract = usr/share/doc/* usr/share/gtk-doc/* usr/share/help/* usr/share/info/* usr/share/man/*
       NoExtract = usr/share/locale/*
       NoExtract = !usr/share/locale/locale.alias
-      NoExtract = usr/share/icons/* usr/share/themes/* usr/share/applications/* usr/share/pixmaps/* usr/share/mime/*
+      NoExtract = usr/share/icons/*
+      NoExtract = !usr/share/icons/hicolor/*
+      NoExtract = !usr/share/icons/Adwaita/symbolic/*
+      NoExtract = !usr/share/icons/Adwaita/index.theme
       EOF
 
   - trigger: post-packages
