@@ -168,6 +168,22 @@ if [ -d "$USER_HOME" ]; then
 EOF
 fi
 
+SSH_DIR="/home/$USERNAME/.ssh"
+install -m 600 /dev/null "$SSH_DIR/known_hosts"
+cat <<EOF > $SSH_DIR/known_hosts
+github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+gitlab.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAfuCHKVTjquxvt6CM6tdG4SLp1Btn/nOeHHE5UOzRdf
+EOF
+
+if [ -n "$SSH_KEY" ]; then
+    install -m 600 /dev/null "$SSH_DIR/authorized_keys"
+    echo "$SSH_KEY" > "$SSH_DIR/authorized_keys"
+else
+    log "No SSH_KEY provided; skipping authorized_keys."
+fi
+chown -R "$USERNAME:$USERNAME" "$SSH_DIR"
+
+
 mkdir -p /etc/ssh/sshd_config.d
 echo StreamLocalBindUnlink yes > /etc/ssh/sshd_config.d/StreamLocalBindUnlink.conf
 if command -v systemctl >/dev/null 2>&1; then
