@@ -82,14 +82,13 @@ cat <<EOF > /etc/doas.conf
 permit nopass :wheel
 EOF
 
-cat <<EOF > /etc/systemd/journald.conf
+mkdir -p /etc/systemd/journald.conf.d
+cat <<'EOF' > /etc/systemd/journald.conf.d/00-volatile.conf
 [Journal]
 Storage=volatile
 RuntimeMaxUse=64M
-SystemMaxUse=0
 EOF
-rm -rf /var/log/journal/*
-systemctl restart systemd-journald
+rm -rf /var/log/journal
 
 # sockets setup
 cat <<EOF > /etc/tmpfiles.d/gui-sockets.conf
