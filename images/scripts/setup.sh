@@ -180,6 +180,12 @@ if [ -d "$USER_HOME" ]; then
     cd home
     if command -v gpg >/dev/null 2>&1; then
         gpg --locate-keys haruta@s3-odara.net || true
+        if gpg --list-keys haruta@s3-odara.net >/dev/null 2>&1; then
+            fingerprint="$(gpg --with-colons --fingerprint haruta@s3-odara.net | awk -F: '/^fpr:/ {print $10; exit}')"
+            if [ -n "\$fingerprint" ]; then
+                printf '%s:6:\n' "\$fingerprint" | gpg --import-ownertrust
+            fi
+        fi
     fi
 
     if command -v vim >/dev/null 2>&1 && [ -f "$USER_HOME/.vim/update_minpac.vim" ]; then
