@@ -7,7 +7,7 @@ USER_COMMENT="${USER_COMMENT:-General User}"
 USER_PASSWORD="${USER_PASSWORD:-}"
 SSH_KEY="${SSH_KEY:-}"
 DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/s3-odara/dotfiles.git}"
-ENVFILE_REPO="${ENVFILE_REPO:-git@github.com:s3-odara/envfile.git}"
+ENVFILE_REPO="${ENVFILE_REPO:-https://github.com/s3-odara/envfile.git}"
 MAKEFLAGS_TARGET="${MAKEFLAGS_TARGET:-16}"
 
 log() {
