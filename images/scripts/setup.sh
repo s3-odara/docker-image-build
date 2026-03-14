@@ -7,10 +7,21 @@ USER_COMMENT="${USER_COMMENT:-General User}"
 USER_PASSWORD="${USER_PASSWORD:-}"
 SSH_KEY="${SSH_KEY:-}"
 DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/s3-odara/dotfiles.git}"
+ENVFILE_REPO="${ENVFILE_REPO:-git@github.com:s3-odara/envfile.git}"
 MAKEFLAGS_TARGET="${MAKEFLAGS_TARGET:-16}"
 
 log() {
     echo "[setup] $*"
+}
+
+write_known_hosts() {
+    local ssh_dir="$1"
+    install -d -m 700 "$ssh_dir"
+    install -m 600 /dev/null "$ssh_dir/known_hosts"
+    cat <<'EOF' > "$ssh_dir/known_hosts"
+github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+gitlab.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAfuCHKVTjquxvt6CM6tdG4SLp1Btn/nOeHHE5UOzRdf
+EOF
 }
 
 if ! id "$USERNAME" &>/dev/null; then
@@ -28,6 +39,7 @@ else
 fi
 
 SSH_DIR="/home/$USERNAME/.ssh"
+write_known_hosts "$SSH_DIR"
 if [ -n "$SSH_KEY" ]; then
     mkdir -p "$SSH_DIR"
     echo "$SSH_KEY" > "$SSH_DIR/authorized_keys"
@@ -148,14 +160,23 @@ if [ -d "$USER_HOME" ]; then
 
     TARGET_DIR="$USER_HOME/git/dotfiles"
     REPO_URL="$DOTFILES_REPO"
+    ENVFILE_DIR="$USER_HOME/git/envfile"
+    ENVFILE_REPO_URL="$ENVFILE_REPO"
 
     if [ ! -d "\$TARGET_DIR/.git" ]; then
         GIT_TERMINAL_PROMPT=0 git clone --depth 1 "\$REPO_URL" "\$TARGET_DIR"
     fi
 
+    if [ ! -d "\$ENVFILE_DIR/.git" ]; then
+        GIT_TERMINAL_PROMPT=0 git clone --depth 1 "\$ENVFILE_REPO_URL" "\$ENVFILE_DIR"
+    fi
+
     echo "Running make stow..."
     cd "\$TARGET_DIR"
     make bootstrap stow-arch
+
+    install -d -m 700 "$USER_HOME/.config/secrets"
+
     cd home
     if command -v gpg >/dev/null 2>&1; then
         gpg --locate-keys haruta@s3-odara.net || true
@@ -168,11 +189,7 @@ EOF
 fi
 
 SSH_DIR="/home/$USERNAME/.ssh"
-install -m 600 /dev/null "$SSH_DIR/known_hosts"
-cat <<EOF > $SSH_DIR/known_hosts
-github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
-gitlab.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAfuCHKVTjquxvt6CM6tdG4SLp1Btn/nOeHHE5UOzRdf
-EOF
+write_known_hosts "$SSH_DIR"
 
 if [ -n "$SSH_KEY" ]; then
     install -m 600 /dev/null "$SSH_DIR/authorized_keys"
