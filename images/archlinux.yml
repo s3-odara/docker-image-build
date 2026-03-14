@@ -86,11 +86,9 @@ actions:
   - trigger: post-packages
     action: |-
       #!/bin/sh -eu
-      umount -l /etc/resolv.conf || true
+      umount -l /etc/resolv.conf 2>/dev/null || true
       rm -f /etc/resolv.conf
-      if [ -e /run/systemd/resolve/stub-resolv.conf ]; then
-        ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
-      fi
+      ln -s /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
 
       # Fix ping
       setcap cap_net_raw=ep /usr/bin/ping || chmod +s /usr/bin/ping
