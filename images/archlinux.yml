@@ -64,6 +64,7 @@ packages:
         - libxml2
         - ripgrep
         - html-xml-utils
+        - pass
       action: install
 
 actions:
