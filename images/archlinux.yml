@@ -63,6 +63,7 @@ packages:
         - ed
         - libxml2
         - ripgrep
+        - fzf
         - html-xml-utils
         - pass
       action: install

@@ -49,14 +49,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Cache distrobuilder and Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            /var/cache/distrobuilder
-            /root/go/pkg/mod
-          key: arch-incus-vm-${{ runner.os }}-${{ hashFiles('images/**', '.github/workflows/build-arch-incus-vm.yml') }}
-
       - name: Generate Build Variables
         id: vars
         run: |

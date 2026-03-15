@@ -97,6 +97,7 @@ packages:
         - linux
         - libxml2
         - ripgrep
+        - fzf
         - html-xml-utils
         - pass
       action: install
