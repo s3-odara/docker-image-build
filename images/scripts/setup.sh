@@ -50,10 +50,6 @@ else
     log "No SSH_KEY provided; skipping authorized_keys."
 fi
 
-if [ -e /run/systemd/resolve/stub-resolv.conf ]; then
-    ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
-fi
-
 if [ -e /usr/share/zoneinfo/Asia/Tokyo ]; then
     ln -sf /usr/share/zoneinfo/Asia/Tokyo /etc/localtime
 fi
