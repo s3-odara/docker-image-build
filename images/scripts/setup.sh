@@ -125,7 +125,7 @@ su - builder -c "rm -rf ~/yay-bin"
 su - builder -c "GIT_TERMINAL_PROMPT=0 git clone --depth 1 https://aur.archlinux.org/yay-bin.git ~/yay-bin"
 su - builder -c "cd ~/yay-bin && makepkg -si --noconfirm --needed"
 
-PACKAGES="doasedit-alternative zsh-pure-prompt"
+PACKAGES="doasedit-alternative zsh-pure-prompt lemminx"
 su - builder -c "yay -S --noconfirm --needed $PACKAGES"
 
 su - builder -c "yes | yay -Scc" || true
