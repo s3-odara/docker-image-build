@@ -46,11 +46,8 @@ packages:
         - vim
         - wget
         - curl
-        - lldb
         - openssh
         - doas
-        - mold
-        - ccache
         - zsh-completions
         - stow
         - knot-resolver
@@ -67,27 +64,17 @@ packages:
         - fzf
         - html-xml-utils
         - pass
-        - gopls
-        - lua-language-server
-        - lua
-        - clang
-        - yaml-language-server
-        - rust-analyzer
-        - vscode-html-languageserver
-        - bash-language-server
-        - ty
-        - ruff
-        - taplo-cli
         - typos-lsp
         - words
-        - sccache
         - lsof
         - socat
         - openbsd-netcat
         - npm
-        - python-pip
         - mtr
         - moreutils
+        - yaml-language-server
+        - taplo-cli
+        - lua
       action: install
 
 actions:

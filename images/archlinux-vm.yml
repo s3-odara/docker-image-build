@@ -79,8 +79,6 @@ packages:
         - curl
         - openssh
         - doas
-        - mold
-        - ccache
         - zsh-completions
         - stow
         - knot-resolver
@@ -93,13 +91,23 @@ packages:
         - htop
         - ed
         - grub
-        - cloud-guest-utils
         - linux
         - libxml2
         - ripgrep
         - fzf
         - html-xml-utils
         - pass
+        - typos-lsp
+        - words
+        - lsof
+        - socat
+        - openbsd-netcat
+        - npm
+        - mtr
+        - moreutils
+        - yaml-language-server
+        - taplo-cli
+        - lua
       action: install
 
 actions:
