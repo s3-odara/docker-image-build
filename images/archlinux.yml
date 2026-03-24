@@ -26,6 +26,14 @@ files:
     source: ./images/scripts/remove-docs.sh
     path: /root/remove-docs.sh
     mode: 0755
+  - generator: copy
+    source: ./images/scripts/preformat-manpages
+    path: /usr/local/bin/preformat-manpages
+    mode: 0755
+  - generator: copy
+    source: ./images/scripts/preformat-manpages.hook
+    path: /etc/pacman.d/hooks/preformat-manpages.hook
+    mode: 0644
 
 packages:
   manager: pacman
@@ -75,6 +83,8 @@ packages:
         - yaml-language-server
         - taplo-cli
         - lua
+        - mandoc
+        - man-pages
       action: install
 
 actions:
@@ -85,7 +95,7 @@ actions:
         sed -i '/^\[options\]/a Include = /etc/pacman.d/noextract.conf' /etc/pacman.conf
       fi
       cat >/etc/pacman.d/noextract.conf <<'EOF'
-      NoExtract = usr/share/doc/* usr/share/gtk-doc/* usr/share/help/* usr/share/info/* usr/share/man/*
+      NoExtract = usr/share/doc/* usr/share/gtk-doc/*
       NoExtract = usr/share/locale/*
       NoExtract = !usr/share/locale/locale.alias
       NoExtract = usr/share/icons/*

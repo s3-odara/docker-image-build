@@ -208,4 +208,8 @@ if command -v systemctl >/dev/null 2>&1; then
     systemctl enable sshd || true
 fi
 
+if [ -x /usr/local/bin/preformat-manpages ]; then
+    /usr/local/bin/preformat-manpages
+fi
+
 log "Setup complete."

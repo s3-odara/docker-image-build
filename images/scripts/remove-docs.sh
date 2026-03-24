@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ドキュメント、マニュアル、ヘルプファイルを削除
-for dir in /usr/share/doc /usr/share/gtk-doc /usr/share/help /usr/share/info /usr/share/man; do
+# ドキュメント、ヘルプファイルを削除
+for dir in /usr/share/doc ; do
   if [ -d "$dir" ]; then
     find "$dir" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
   fi
