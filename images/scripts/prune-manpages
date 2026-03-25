@@ -1,0 +1,21 @@
+#!/bin/bash
+set -euo pipefail
+
+log() {
+    echo "[prune-manpages] $*"
+}
+
+main() {
+    local man_root="/usr/share/man"
+
+    [ -d "$man_root" ] || return 0
+
+    find "$man_root" -mindepth 1 -maxdepth 1 -type d \
+        ! -name 'man*' \
+        ! -name 'cat*' \
+        -exec rm -rf -- {} +
+
+    log "Removed non-English manpage directories."
+}
+
+main "$@"

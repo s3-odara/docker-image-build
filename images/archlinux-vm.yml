@@ -58,12 +58,12 @@ files:
     path: /root/remove-docs.sh
     mode: 0755
   - generator: copy
-    source: ./images/scripts/preformat-manpages
-    path: /usr/local/bin/preformat-manpages
+    source: ./images/scripts/prune-manpages
+    path: /usr/local/bin/prune-manpages
     mode: 0755
   - generator: copy
-    source: ./images/scripts/preformat-manpages.hook
-    path: /etc/pacman.d/hooks/preformat-manpages.hook
+    source: ./images/scripts/prune-manpages.hook
+    path: /etc/pacman.d/hooks/prune-manpages.hook
     mode: 0644
 
 packages:
@@ -116,7 +116,7 @@ packages:
         - yaml-language-server
         - taplo-cli
         - lua
-        - mandoc
+        - man-db
         - man-pages
       action: install
 

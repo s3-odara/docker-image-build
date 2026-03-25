@@ -6,7 +6,6 @@ Type = Package
 Target = *
 
 [Action]
-Description = Preformat English manpages and drop sources
+Description = Remove non-English manpages
 When = PostTransaction
-Exec = /usr/local/bin/preformat-manpages
-Depends = mandoc
+Exec = /usr/local/bin/prune-manpages
