@@ -85,6 +85,7 @@ packages:
         - lua
         - man-db
         - man-pages
+        - bubblewrap 
       action: install
 
 actions:
