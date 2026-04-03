@@ -152,6 +152,10 @@ if [ -d "$USER_HOME" ]; then
     su - "$USERNAME" -s /bin/bash <<EOF
     set -euo pipefail
 
+    export HOME="$USER_HOME"
+    export GNUPGHOME="$USER_HOME/.gnupg"
+    install -d -m 700 "\$GNUPGHOME"
+
     mkdir -p "$USER_HOME/git"
 
     TARGET_DIR="$USER_HOME/git/dotfiles"
@@ -175,11 +179,11 @@ if [ -d "$USER_HOME" ]; then
 
     cd home
     if command -v gpg >/dev/null 2>&1; then
-        gpg --locate-keys haruta@s3-odara.net || true
-        if gpg --list-keys haruta@s3-odara.net >/dev/null 2>&1; then
-            fingerprint="$(gpg --with-colons --fingerprint haruta@s3-odara.net | awk -F: '/^fpr:/ {print $10; exit}')"
+        gpg --homedir "\$GNUPGHOME" --locate-keys haruta@s3-odara.net || true
+        if gpg --homedir "\$GNUPGHOME" --list-keys haruta@s3-odara.net >/dev/null 2>&1; then
+            fingerprint=\$(gpg --homedir "\$GNUPGHOME" --with-colons --fingerprint haruta@s3-odara.net | awk -F: '/^fpr:/ {print \$10; exit}')
             if [ -n "\$fingerprint" ]; then
-                printf '%s:6:\n' "\$fingerprint" | gpg --import-ownertrust
+                printf '%s:6:\n' "\$fingerprint" | gpg --homedir "\$GNUPGHOME" --import-ownertrust
             fi
         fi
     fi
