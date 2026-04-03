@@ -119,6 +119,7 @@ packages:
         - man-db
         - man-pages
         - bubblewrap
+        - cloud-guest-utils
       action: install
 
 actions:
