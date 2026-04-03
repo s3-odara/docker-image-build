@@ -1,4 +1,4 @@
-name: Build Arch Linux Incus Image
+name: Build Arch Linux Incus Images
 
 on:
   schedule:
@@ -6,7 +6,9 @@ on:
   push:
     paths:
       - ".github/workflows/build-arch-incus.yml"
+      - ".github/workflows/build-arch-incus-vm.yml"
       - "images/archlinux.yml"
+      - "images/archlinux-vm.yml"
       - "images/scripts/**"
       - "scripts/ci/**"
   workflow_dispatch:
@@ -43,7 +45,8 @@ jobs:
         run: |
           set -euo pipefail
           pacman -Syu --noconfirm
-          pacman -S --noconfirm git go zstd distrobuilder aws-cli squashfs-tools rsync curl unzip jq
+          pacman -S --noconfirm git go zstd distrobuilder aws-cli squashfs-tools rsync curl unzip jq \
+            qemu-base dosfstools btrfs-progs
 
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -63,7 +66,7 @@ jobs:
           export PATH="$PATH:$GOPATH/bin"
           go install "github.com/lxc/incus/v6/cmd/incus-simplestreams@${{ steps.vars.outputs.incus_version }}"
 
-      - name: Build Incus Image
+      - name: Build Incus Container Image
         env:
           USER_PASSWORD: ${{ secrets.INCUS_USER_PASSWORD }}
           SSH_KEY: ${{ secrets.INCUS_SSH_KEY }}
@@ -83,6 +86,32 @@ jobs:
             --compression zstd
           test -s incus.tar.zst
           test -s rootfs.squashfs
+          mv incus.tar.zst incus-container.tar.zst
+          mv rootfs.squashfs rootfs-container.squashfs
+
+      - name: Build Incus VM Image
+        env:
+          USER_PASSWORD: ${{ secrets.INCUS_USER_PASSWORD }}
+          SSH_KEY: ${{ secrets.INCUS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          export GOPATH=/root/go
+          export PATH="$PATH:$GOPATH/bin"
+          mkdir -p /var/cache/distrobuilder
+
+          distrobuilder build-incus images/archlinux-vm.yml \
+            --vm \
+            --cache-dir /var/cache/distrobuilder \
+            --cleanup=false \
+            -o image.release=${{ steps.vars.outputs.iso_release }} \
+            -o image.serial=${{ steps.vars.outputs.build_serial }} \
+            -o image.architecture=x86_64 \
+            -o image.variant=default \
+            --compression zstd
+          test -s incus.tar.zst
+          test -s disk.qcow2
+          mv incus.tar.zst incus-vm.tar.zst
+          mv disk.qcow2 disk-vm.qcow2
 
       - name: Sync current repo from R2
         env:
@@ -98,7 +127,7 @@ jobs:
             echo "::warning::Failed to sync existing repository from R2 (continuing with empty repo)."
           fi
 
-      - name: Add Image to Repository
+      - name: Add Images to Repository
         run: |
           set -euo pipefail
           export GOPATH=/root/go
@@ -108,8 +137,14 @@ jobs:
           incus-simplestreams add \
             --no-default-alias \
             --alias archlinux/latest \
-            ../incus.tar.zst \
-            ../rootfs.squashfs
+            ../incus-container.tar.zst \
+            ../rootfs-container.squashfs
+
+          incus-simplestreams add \
+            --no-default-alias \
+            --alias archlinux/vm \
+            ../incus-vm.tar.zst \
+            ../disk-vm.qcow2
 
       - name: Prune Old Products (keep newest per OS/variant/arch)
         run: |
