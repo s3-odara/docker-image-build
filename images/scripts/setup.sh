@@ -102,6 +102,7 @@ rm -rf /var/log/journal
 cat <<EOF > /etc/tmpfiles.d/gui-sockets.conf
 d  /run/user/1000        0700 1000 1000 -
 d  /run/user/1000/pulse  0700 1000 1000 -
+d  /tmp/.X11-unix        1777 root root -
 L+ /run/user/1000/wayland-1    - - - - /mnt/.container_sockets/wayland-1
 L+ /run/user/1000/pulse/native - - - - /mnt/.container_sockets/pulse-native
 EOF
