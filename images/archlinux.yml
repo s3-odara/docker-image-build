@@ -86,6 +86,7 @@ packages:
         - man-db
         - man-pages
         - bubblewrap 
+        - ccache
       action: install
 
 actions:

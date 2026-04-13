@@ -120,6 +120,7 @@ packages:
         - man-pages
         - bubblewrap
         - cloud-guest-utils
+        - ccache
       action: install
 
 actions:
