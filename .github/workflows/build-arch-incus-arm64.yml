@@ -74,7 +74,8 @@ jobs:
               if [ -n "${INCUS_VERSION_INPUT:-}" ]; then
                 INCUS_VERSION="$INCUS_VERSION_INPUT"
               else
-                INCUS_VERSION="$(go list -m -versions github.com/lxc/incus/v6 | awk "{print \\$NF}")"
+                INCUS_VERSIONS="$(go list -m -versions github.com/lxc/incus/v6)"
+                INCUS_VERSION="${INCUS_VERSIONS##* }"
               fi
               if [ -z "$INCUS_VERSION" ]; then
                 echo "::error::Failed to determine incus-simplestreams version"
