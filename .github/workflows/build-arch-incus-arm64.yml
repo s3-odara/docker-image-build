@@ -30,6 +30,9 @@ jobs:
     environment: cloudflare-r2-filess3-odaranet
     permissions:
       contents: read
+    outputs:
+      incus_version: ${{ steps.vars.outputs.incus_version }}
+      build_serial: ${{ steps.vars.outputs.build_serial }}
 
     steps:
       - name: Checkout repository
@@ -38,14 +41,42 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
-      - name: Build and Upload in Arch Container
+      - name: Generate Build Variables
+        id: vars
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-          R2_ENDPOINT_URL: https://6ecd930c8cd4dc63f87c9398762626e8.r2.cloudflarestorage.com
-          R2_BUCKET_PATH: filess3-odaranet/pub/container-arm64
           INCUS_VERSION_INPUT: ${{ github.event.inputs.incus_version }}
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -v "$(dirname "$GITHUB_OUTPUT"):$(dirname "$GITHUB_OUTPUT")" \
+            -w /workspace \
+            -e GITHUB_OUTPUT \
+            -e INCUS_VERSION_INPUT \
+            archlinux:base-devel \
+            /bin/bash -c '
+              set -euo pipefail
+              pacman -Syu --noconfirm
+              pacman -S --noconfirm go curl
+              BUILD_SERIAL="$(date -u +%Y%m%d_%H%M)"
+              if [ -n "${INCUS_VERSION_INPUT:-}" ]; then
+                INCUS_VERSION="$INCUS_VERSION_INPUT"
+              else
+                INCUS_VERSION="$(go list -m -versions github.com/lxc/incus/v6 | awk '\''{print $NF}'\'')"
+              fi
+              if [ -z "$INCUS_VERSION" ]; then
+                echo "::error::Failed to determine incus-simplestreams version"
+                exit 1
+              fi
+              echo "Using incus-simplestreams: $INCUS_VERSION"
+              {
+                echo "build_serial=$BUILD_SERIAL"
+                echo "incus_version=$INCUS_VERSION"
+              } >> "$GITHUB_OUTPUT"
+            '
+
+      - name: Build Incus Container Image (ARM64)
+        env:
           USER_PASSWORD: ${{ secrets.INCUS_USER_PASSWORD }}
           SSH_KEY: ${{ secrets.INCUS_SSH_KEY }}
         run: |
@@ -53,42 +84,24 @@ jobs:
           docker run --rm --privileged \
             -v "${{ github.workspace }}:/workspace" \
             -w /workspace \
-            -e AWS_ACCESS_KEY_ID \
-            -e AWS_SECRET_ACCESS_KEY \
-            -e AWS_DEFAULT_REGION \
-            -e R2_ENDPOINT_URL \
-            -e R2_BUCKET_PATH \
-            -e INCUS_VERSION_INPUT \
             -e USER_PASSWORD \
             -e SSH_KEY \
+            -e BUILD_SERIAL='${{ steps.vars.outputs.build_serial }}' \
+            -e INCUS_VERSION='${{ steps.vars.outputs.incus_version }}' \
             archlinux:base-devel \
             /bin/bash -c '
               set -euo pipefail
 
-              echo "=== 1. Install Dependencies ==="
+              echo "=== Install Dependencies ==="
               pacman -Syu --noconfirm
               pacman -S --noconfirm git go zstd distrobuilder aws-cli squashfs-tools rsync curl unzip jq qemu-user-static
 
-              echo "=== 2. Generate Build Variables ==="
-              BUILD_SERIAL="$(date -u +%Y%m%d_%H%M)"
-              if [ -n "${INCUS_VERSION_INPUT:-}" ]; then
-                INCUS_VERSION="$INCUS_VERSION_INPUT"
-              else
-                INCUS_VERSIONS="$(go list -m -versions github.com/lxc/incus/v6)"
-                INCUS_VERSION="${INCUS_VERSIONS##* }"
-              fi
-              if [ -z "$INCUS_VERSION" ]; then
-                echo "::error::Failed to determine incus-simplestreams version"
-                exit 1
-              fi
-              echo "Using incus-simplestreams: $INCUS_VERSION"
-
-              echo "=== 3. Install Incus Simplestreams ==="
+              echo "=== Install Incus Simplestreams ==="
               export GOPATH=/root/go
               export PATH=$PATH:$GOPATH/bin
               go install "github.com/lxc/incus/v6/cmd/incus-simplestreams@$INCUS_VERSION"
 
-              echo "=== 4. Build Incus Container Image (ARM64) ==="
+              echo "=== Build Incus Container Image (ARM64) ==="
               mkdir -p /var/cache/distrobuilder
               echo "Server = http://nj.us.mirror.archlinuxarm.org/\$arch/\$repo" > /etc/pacman.d/mirrorlist
 
@@ -103,14 +116,73 @@ jobs:
               test -s rootfs.squashfs
               mv incus.tar.zst incus-container.tar.zst
               mv rootfs.squashfs rootfs-container.squashfs
+            '
 
-              echo "=== 5. Sync current repo from R2 ==="
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: archlinux-arm64-incus-image
+          path: |
+            incus-container.tar.zst
+            rootfs-container.squashfs
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: build
+    environment: cloudflare-r2-filess3-odaranet
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: archlinux-arm64-incus-image
+          path: .
+
+      - name: Publish to R2 in Arch Container
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ENDPOINT_URL: https://6ecd930c8cd4dc63f87c9398762626e8.r2.cloudflarestorage.com
+          R2_BUCKET_PATH: filess3-odaranet/pub/container-arm64
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace \
+            -e AWS_ACCESS_KEY_ID \
+            -e AWS_SECRET_ACCESS_KEY \
+            -e AWS_DEFAULT_REGION \
+            -e R2_ENDPOINT_URL \
+            -e R2_BUCKET_PATH \
+            -e INCUS_VERSION='${{ needs.build.outputs.incus_version }}' \
+            archlinux:base-devel \
+            /bin/bash -c '
+              set -euo pipefail
+
+              echo "=== Install Dependencies ==="
+              pacman -Syu --noconfirm
+              pacman -S --noconfirm git go zstd distrobuilder aws-cli squashfs-tools rsync curl unzip jq
+
+              echo "=== Install Incus Simplestreams ==="
+              export GOPATH=/root/go
+              export PATH=$PATH:$GOPATH/bin
+              go install "github.com/lxc/incus/v6/cmd/incus-simplestreams@$INCUS_VERSION"
+
+              echo "=== Sync current repo from R2 ==="
               mkdir -p repo
               if ! aws s3 sync "s3://$R2_BUCKET_PATH" ./repo --endpoint-url "$R2_ENDPOINT_URL"; then
                 echo "::warning::Failed to sync existing repository from R2 (continuing with empty repo)."
               fi
 
-              echo "=== 6. Add Image to Repository ==="
+              echo "=== Add Image to Repository ==="
               cd repo
               incus-simplestreams add \
                 --no-default-alias \
@@ -118,13 +190,13 @@ jobs:
                 ../incus-container.tar.zst \
                 ../rootfs-container.squashfs
 
-              echo "=== 7. Prune Old Products (keep newest per OS/variant/arch) ==="
+              echo "=== Prune Old Products (keep newest per OS/variant/arch) ==="
               bash ../images/scripts/simplestreams-prune-products.sh
 
-              echo "=== 8. Cleanup Old Images ==="
+              echo "=== Cleanup Old Images ==="
               incus-simplestreams prune --retention 1
 
-              echo "=== 9. Upload changes to R2 ==="
+              echo "=== Upload changes to R2 ==="
               aws s3 sync ./ "s3://$R2_BUCKET_PATH" \
                 --endpoint-url "$R2_ENDPOINT_URL" \
                 --delete
