@@ -24,9 +24,12 @@ defaults:
   run:
     shell: bash
 
+env:
+  ARCHLINUXARM_CONTAINER_IMAGE: lfdevs/archlinuxarm:base-devel
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     environment: cloudflare-r2-filess3-odaranet
     permissions:
       contents: read
@@ -37,9 +40,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Generate Build Variables
         id: vars
@@ -53,7 +53,7 @@ jobs:
             -w /workspace \
             -e GITHUB_OUTPUT \
             -e INCUS_VERSION_INPUT \
-            archlinux:base-devel \
+            "$ARCHLINUXARM_CONTAINER_IMAGE" \
             /bin/bash -c '
               set -euo pipefail
               pacman -Syu --noconfirm
@@ -88,13 +88,13 @@ jobs:
             -e SSH_KEY \
             -e BUILD_SERIAL='${{ steps.vars.outputs.build_serial }}' \
             -e INCUS_VERSION='${{ steps.vars.outputs.incus_version }}' \
-            archlinux:base-devel \
+            "$ARCHLINUXARM_CONTAINER_IMAGE" \
             /bin/bash -c '
               set -euo pipefail
 
               echo "=== Install Dependencies ==="
               pacman -Syu --noconfirm
-              pacman -S --noconfirm git go zstd distrobuilder aws-cli squashfs-tools rsync curl unzip jq qemu-user-static
+              pacman -S --noconfirm git go zstd distrobuilder aws-cli squashfs-tools rsync curl unzip jq
 
               echo "=== Install Incus Simplestreams ==="
               export GOPATH=/root/go
@@ -129,7 +129,7 @@ jobs:
           retention-days: 1
 
   publish:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     needs: build
     environment: cloudflare-r2-filess3-odaranet
     permissions:
@@ -163,7 +163,7 @@ jobs:
             -e R2_ENDPOINT_URL \
             -e R2_BUCKET_PATH \
             -e INCUS_VERSION='${{ needs.build.outputs.incus_version }}' \
-            archlinux:base-devel \
+            "$ARCHLINUXARM_CONTAINER_IMAGE" \
             /bin/bash -c '
               set -euo pipefail
 
