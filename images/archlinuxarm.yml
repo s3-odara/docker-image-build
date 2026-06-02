@@ -45,7 +45,6 @@ packages:
     - packages:
         - base
         - base-devel
-        - vi
         - tmux
         - gnupg
         - zsh
@@ -56,7 +55,7 @@ packages:
         - wget
         - curl
         - openssh
-        - doas
+        - opendoas
         - mold
         - ccache
         - zsh-completions
