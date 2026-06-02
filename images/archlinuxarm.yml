@@ -76,7 +76,6 @@ packages:
         - less
         - bc
         - tcpdump
-        - linux-aarch64
         - strace
         - htop
         - ed
