@@ -23,6 +23,18 @@ files:
     source: ./images/scripts/setup.sh
     path: /root/setup.sh
     mode: 0755
+  - generator: copy
+    source: ./images/scripts/remove-docs.sh
+    path: /root/remove-docs.sh
+    mode: 0755
+  - generator: copy
+    source: ./images/scripts/prune-manpages
+    path: /usr/local/bin/prune-manpages
+    mode: 0755
+  - generator: copy
+    source: ./images/scripts/prune-manpages.hook
+    path: /etc/pacman.d/hooks/prune-manpages.hook
+    mode: 0644
 
 packages:
   manager: pacman
@@ -56,8 +68,6 @@ packages:
         - curl
         - openssh
         - opendoas
-        - mold
-        - ccache
         - zsh-completions
         - stow
         - knot-resolver
@@ -70,35 +80,69 @@ packages:
         - strace
         - htop
         - ed
+        - libxml2
+        - ripgrep
+        - fzf
+        - html-xml-utils
+        - pass
+        - words
+        - lsof
+        - socat
+        - openbsd-netcat
+        - mtr
+        - moreutils
+        - lua
+        - man-db
+        - man-pages
+        - bubblewrap
+        - ccache
       action: install
 
 actions:
   - trigger: post-unpack
     action: |-
-      #!/bin/bash -x
-      sed -i '/^\[options\]/a \
-      NoExtract = usr/share/doc/* usr/share/gtk-doc/* usr/share/help/* usr/share/info/* usr/share/man/*\
-      NoExtract = usr/share/locale/*\
-      NoExtract = usr/share/icons/* usr/share/themes/* usr/share/applications/* usr/share/pixmaps/* usr/share/mime/*' /etc/pacman.conf
+      #!/bin/sh -eu
+      echo 'Server = http://nj.us.mirror.archlinuxarm.org/$arch/$repo' > /etc/pacman.d/mirrorlist
+      pacman-key --populate archlinuxarm
+      if ! grep -q '^DownloadUser = root' /etc/pacman.conf; then
+        sed -i '/^\[options\]/a DownloadUser = root' /etc/pacman.conf
+      fi
+      if ! grep -q '^DisableSandbox' /etc/pacman.conf; then
+        sed -i '/^\[options\]/a DisableSandbox' /etc/pacman.conf
+      fi
+      if ! grep -q '^Include = /etc/pacman.d/noextract.conf' /etc/pacman.conf; then
+        sed -i '/^\[options\]/a Include = /etc/pacman.d/noextract.conf' /etc/pacman.conf
+      fi
+      cat >/etc/pacman.d/noextract.conf <<'EOF'
+      NoExtract = usr/share/doc/* usr/share/gtk-doc/*
+      NoExtract = usr/share/locale/*
+      NoExtract = !usr/share/locale/locale.alias
+      NoExtract = usr/share/icons/*
+      NoExtract = !usr/share/icons/hicolor/*
+      NoExtract = !usr/share/icons/Adwaita/symbolic/*
+      NoExtract = !usr/share/icons/Adwaita/index.theme
+      EOF
 
   - trigger: post-packages
     action: |-
-      #!/bin/sh -x
-      umount -l /etc/resolv.conf || true
-      rm /etc/resolv.conf
-      ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+      #!/bin/sh -eu
+      umount -l /etc/resolv.conf 2>/dev/null || true
+      rm -f /etc/resolv.conf
+      ln -s /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
 
       # Fix ping
       setcap cap_net_raw=ep /usr/bin/ping || chmod +s /usr/bin/ping
   - trigger: post-files
     action: |-
-      #!/bin/bash -x
-      /root/setup.sh
-      rm /root/setup.sh
-      # ドキュメント、マニュアル、ヘルプファイルを削除
-      rm -rf /usr/share/doc/* /usr/share/gtk-doc/* /usr/share/help/* /usr/share/info/* /usr/share/man/*
-      find /usr/share/locale -mindepth 1 -maxdepth 1 -type d -not -name 'en' -not -name 'ja' -exec rm -rf {} + &&
-      rm -rf /usr/share/icons/* /usr/share/themes/* /usr/share/applications/* /usr/share/pixmaps/* /usr/share/mime/*
+      #!/bin/sh -eu
+      if [ -x /root/setup.sh ]; then
+        /root/setup.sh
+        rm -f /root/setup.sh
+      fi
+      if [ -x /root/remove-docs.sh ]; then
+        /root/remove-docs.sh
+        rm -f /root/remove-docs.sh
+      fi
 
 mappings:
   architecture_map: archlinux
