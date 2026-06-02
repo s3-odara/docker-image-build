@@ -113,11 +113,25 @@ actions:
         sed -i '/^\[options\]/a Include = /etc/pacman.d/noextract.conf' /etc/pacman.conf
       fi
 
+      cat >/etc/pacman.d/noextract.conf <<'EOF'
+      NoExtract = usr/share/doc/* usr/share/gtk-doc/*
+      NoExtract = usr/share/locale/*
+      NoExtract = !usr/share/locale/locale.alias
+      NoExtract = usr/share/icons/*
+      NoExtract = !usr/share/icons/hicolor/*
+      NoExtract = !usr/share/icons/Adwaita/symbolic/*
+      NoExtract = !usr/share/icons/Adwaita/index.theme
+      EOF
+
+  - trigger: post-packages
+    action: |-
+      #!/bin/sh -eu
       # Container images use the host kernel. The Arch Linux ARM rootfs ships
       # kernel, initramfs, kernel modules, and firmware payloads that are useful
       # for bootable boards but make Incus container images much larger than the
-      # x86_64 bootstrap-based image. Remove packages first so pacman DB stays
-      # consistent, then delete any leftover unpacked payloads as a safety net.
+      # x86_64 bootstrap-based image. Remove packages after distrobuilder package
+      # updates/installations so pacman DB stays consistent, then delete any
+      # leftover unpacked payloads as a safety net.
       remove_pkgs=""
       for pkg in \
         linux-aarch64 \
@@ -145,19 +159,6 @@ actions:
       fi
       rm -rf /boot/* /usr/lib/modules/* /usr/lib/firmware/*
 
-      cat >/etc/pacman.d/noextract.conf <<'EOF'
-      NoExtract = usr/share/doc/* usr/share/gtk-doc/*
-      NoExtract = usr/share/locale/*
-      NoExtract = !usr/share/locale/locale.alias
-      NoExtract = usr/share/icons/*
-      NoExtract = !usr/share/icons/hicolor/*
-      NoExtract = !usr/share/icons/Adwaita/symbolic/*
-      NoExtract = !usr/share/icons/Adwaita/index.theme
-      EOF
-
-  - trigger: post-packages
-    action: |-
-      #!/bin/sh -eu
       umount -l /etc/resolv.conf 2>/dev/null || true
       rm -f /etc/resolv.conf
       ln -s /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
