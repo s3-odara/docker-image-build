@@ -194,7 +194,7 @@ jobs:
               bash ../images/scripts/simplestreams-prune-products.sh
 
               echo "=== Cleanup Old Images ==="
-              incus-simplestreams prune --retention 1
+              incus-simplestreams prune --retention 0
 
               echo "=== Upload changes to R2 ==="
               aws s3 sync ./ "s3://$R2_BUCKET_PATH" \
