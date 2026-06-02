@@ -112,6 +112,39 @@ actions:
       if ! grep -q '^Include = /etc/pacman.d/noextract.conf' /etc/pacman.conf; then
         sed -i '/^\[options\]/a Include = /etc/pacman.d/noextract.conf' /etc/pacman.conf
       fi
+
+      # Container images use the host kernel. The Arch Linux ARM rootfs ships
+      # kernel, initramfs, kernel modules, and firmware payloads that are useful
+      # for bootable boards but make Incus container images much larger than the
+      # x86_64 bootstrap-based image. Remove packages first so pacman DB stays
+      # consistent, then delete any leftover unpacked payloads as a safety net.
+      remove_pkgs=""
+      for pkg in \
+        linux-aarch64 \
+        linux-firmware \
+        linux-firmware-amdgpu \
+        linux-firmware-atheros \
+        linux-firmware-broadcom \
+        linux-firmware-cirrus \
+        linux-firmware-intel \
+        linux-firmware-mediatek \
+        linux-firmware-nvidia \
+        linux-firmware-other \
+        linux-firmware-radeon \
+        linux-firmware-realtek \
+        linux-firmware-whence \
+        mkinitcpio \
+        mkinitcpio-busybox
+      do
+        if pacman -Qq "$pkg" >/dev/null 2>&1; then
+          remove_pkgs="$remove_pkgs $pkg"
+        fi
+      done
+      if [ -n "$remove_pkgs" ]; then
+        pacman -Rns --noconfirm $remove_pkgs
+      fi
+      rm -rf /boot/* /usr/lib/modules/* /usr/lib/firmware/*
+
       cat >/etc/pacman.d/noextract.conf <<'EOF'
       NoExtract = usr/share/doc/* usr/share/gtk-doc/*
       NoExtract = usr/share/locale/*
