@@ -122,9 +122,9 @@ fi
 
 useradd -m -s /bin/bash -G wheel builder
 
-su - builder -c "rm -rf ~/paru"
-su - builder -c "GIT_TERMINAL_PROMPT=0 git clone --depth 1 https://aur.archlinux.org/paru.git ~/paru"
-su - builder -c "cd ~/paru && makepkg -si --noconfirm --needed"
+su - builder -c "rm -rf ~/paru-bin"
+su - builder -c "GIT_TERMINAL_PROMPT=0 git clone --depth 1 https://aur.archlinux.org/paru-bin.git ~/paru-bin"
+su - builder -c "cd ~/paru-bin && makepkg -si --noconfirm --needed"
 
 PACKAGES="doasedit-alternative zsh-pure-prompt"
 su - builder -c "paru -S --noconfirm --needed $PACKAGES"
