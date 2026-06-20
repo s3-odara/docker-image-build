@@ -122,14 +122,14 @@ fi
 
 useradd -m -s /bin/bash -G wheel builder
 
-su - builder -c "rm -rf ~/yay-bin"
-su - builder -c "GIT_TERMINAL_PROMPT=0 git clone --depth 1 https://aur.archlinux.org/yay-bin.git ~/yay-bin"
-su - builder -c "cd ~/yay-bin && makepkg -si --noconfirm --needed"
+su - builder -c "rm -rf ~/paru"
+su - builder -c "GIT_TERMINAL_PROMPT=0 git clone --depth 1 https://aur.archlinux.org/paru.git ~/paru"
+su - builder -c "cd ~/paru && makepkg -si --noconfirm --needed"
 
 PACKAGES="doasedit-alternative zsh-pure-prompt"
-su - builder -c "yay -S --noconfirm --needed $PACKAGES"
+su - builder -c "paru -S --noconfirm --needed $PACKAGES"
 
-su - builder -c "yes | yay -Scc" || true
+su - builder -c "yes | paru -Scc" || true
 
 # Work around pacman cache cleanup failures when download directories exist.
 if [ -d /var/cache/pacman/pkg ]; then
