@@ -9,6 +9,7 @@ SSH_KEY="${SSH_KEY:-}"
 DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/s3-odara/dotfiles.git}"
 ENVFILE_REPO="${ENVFILE_REPO:-https://github.com/s3-odara/envfile.git}"
 MAKEFLAGS_TARGET="${MAKEFLAGS_TARGET:-16}"
+ARCH="$(uname -m)"
 
 log() {
     echo "[setup] $*"
@@ -62,12 +63,18 @@ locale-gen
 echo "LANG=en_US.UTF-8" > /etc/locale.conf
 
 NPROC="$(nproc)"
-sed -i \
-    -e 's/CFLAGS="-march=x86-64/CFLAGS="-march=x86-64-v3/' \
-    -e '/^LDFLAGS=/ s/"$/ -fuse-ld=mold"/' \
-    -e '/^LTOFLAGS=/a RUSTFLAGS="-C opt-level=3 -C link-arg=-fuse-ld=mold -C target-cpu=x86-64-v3"' \
-    -e "s/#MAKEFLAGS=\"-j2\"/MAKEFLAGS=\"-j$NPROC\"/" \
-    /etc/makepkg.conf
+if [ "$ARCH" = "x86_64" ]; then
+    sed -i \
+        -e 's/CFLAGS="-march=x86-64/CFLAGS="-march=x86-64-v3/' \
+        -e '/^LDFLAGS=/ s/"$/ -fuse-ld=mold"/' \
+        -e '/^LTOFLAGS=/a RUSTFLAGS="-C opt-level=3 -C link-arg=-fuse-ld=mold -C target-cpu=x86-64-v3"' \
+        -e "s/#MAKEFLAGS=\"-j2\"/MAKEFLAGS=\"-j$NPROC\"/" \
+        /etc/makepkg.conf
+else
+    sed -i \
+        -e "s/#MAKEFLAGS=\"-j2\"/MAKEFLAGS=\"-j$NPROC\"/" \
+        /etc/makepkg.conf
+fi
 
 
 # pacman
@@ -76,14 +83,18 @@ sed -i \
     -e 's/^ParallelDownloads = 5/ParallelDownloads = 10/' \
     /etc/pacman.conf
 
-MIRRORLIST_URL="https://archlinux.org/mirrorlist/?country=JP&protocol=https"
-if command -v rankmirrors >/dev/null 2>&1; then
-    curl -fsSL --retry 5 --retry-delay 2 "$MIRRORLIST_URL" | \
-        sed -e 's/^#Server/Server/' -e '/^#/d' | \
-        rankmirrors -v - > /etc/pacman.d/mirrorlist
+if [ "$ARCH" = "aarch64" ]; then
+    echo 'Server = http://nj.us.mirror.archlinuxarm.org/$arch/$repo' > /etc/pacman.d/mirrorlist
 else
-    curl -fsSL --retry 5 --retry-delay 2 "$MIRRORLIST_URL" | \
-        sed -e 's/^#Server/Server/' -e '/^#/d' > /etc/pacman.d/mirrorlist
+    MIRRORLIST_URL="https://archlinux.org/mirrorlist/?country=JP&protocol=https"
+    if command -v rankmirrors >/dev/null 2>&1; then
+        curl -fsSL --retry 5 --retry-delay 2 "$MIRRORLIST_URL" | \
+            sed -e 's/^#Server/Server/' -e '/^#/d' | \
+            rankmirrors -v - > /etc/pacman.d/mirrorlist
+    else
+        curl -fsSL --retry 5 --retry-delay 2 "$MIRRORLIST_URL" | \
+            sed -e 's/^#Server/Server/' -e '/^#/d' > /etc/pacman.d/mirrorlist
+    fi
 fi
 
 cat <<EOF > /etc/doas.conf
@@ -122,9 +133,9 @@ fi
 
 useradd -m -s /bin/bash -G wheel builder
 
-su - builder -c "rm -rf ~/paru-bin"
-su - builder -c "GIT_TERMINAL_PROMPT=0 git clone --depth 1 https://aur.archlinux.org/paru-bin.git ~/paru-bin"
-su - builder -c "cd ~/paru-bin && makepkg -si --noconfirm --needed"
+su - builder -c "rm -rf ~/paru"
+su - builder -c "GIT_TERMINAL_PROMPT=0 git clone --depth 1 https://aur.archlinux.org/paru.git ~/paru"
+su - builder -c "cd ~/paru && makepkg -si --noconfirm --needed"
 
 PACKAGES="doasedit-alternative zsh-pure-prompt"
 su - builder -c "paru -S --noconfirm --needed $PACKAGES"
@@ -141,12 +152,19 @@ fi
 
 userdel -r builder
 
-sed -i \
-    -e 's/CFLAGS="-march=x86-64-v3/CFLAGS="-march=native/' \
-    -e 's/RUSTFLAGS="-C opt-level=3 -C link-arg=-fuse-ld=mold -C target-cpu=x86-64-v3"/RUSTFLAGS="-C opt-level=3 -C link-arg=-fuse-ld=mold -C target-cpu=native"/' \
-    -e "s/^MAKEFLAGS=.*/MAKEFLAGS=\"-j$MAKEFLAGS_TARGET\"/" \
-    -e '/^BUILDENV=/ s/!ccache/ccache/' \
-    /etc/makepkg.conf
+if [ "$ARCH" = "x86_64" ]; then
+    sed -i \
+        -e 's/CFLAGS="-march=x86-64-v3/CFLAGS="-march=native/' \
+        -e 's/RUSTFLAGS="-C opt-level=3 -C link-arg=-fuse-ld=mold -C target-cpu=x86-64-v3"/RUSTFLAGS="-C opt-level=3 -C link-arg=-fuse-ld=mold -C target-cpu=native"/' \
+        -e "s/^MAKEFLAGS=.*/MAKEFLAGS=\"-j$MAKEFLAGS_TARGET\"/" \
+        -e '/^BUILDENV=/ s/!ccache/ccache/' \
+        /etc/makepkg.conf
+else
+    sed -i \
+        -e "s/^MAKEFLAGS=.*/MAKEFLAGS=\"-j$MAKEFLAGS_TARGET\"/" \
+        -e '/^BUILDENV=/ s/!ccache/ccache/' \
+        /etc/makepkg.conf
+fi
 
 USER_HOME="/home/$USERNAME"
 if [ -d "$USER_HOME" ]; then
