@@ -40,18 +40,6 @@ else
     log "No USER_PASSWORD provided; account locked."
 fi
 
-SSH_DIR="/home/$USERNAME/.ssh"
-write_known_hosts "$SSH_DIR"
-if [ -n "$SSH_KEY" ]; then
-    mkdir -p "$SSH_DIR"
-    echo "$SSH_KEY" > "$SSH_DIR/authorized_keys"
-    chmod 700 "$SSH_DIR"
-    chmod 600 "$SSH_DIR/authorized_keys"
-    chown -R "$USERNAME:$USERNAME" "$SSH_DIR"
-else
-    log "No SSH_KEY provided; skipping authorized_keys."
-fi
-
 if [ -e /usr/share/zoneinfo/Asia/Tokyo ]; then
     ln -sf /usr/share/zoneinfo/Asia/Tokyo /etc/localtime
 fi
@@ -98,11 +86,13 @@ else
     fi
 fi
 
+install -m 600 -o root -g root /dev/null /etc/doas.conf
 cat <<EOF > /etc/doas.conf
 permit nopass :wheel
 EOF
 
-mkdir -p /etc/systemd/journald.conf.d
+install -d -m 755 /etc/systemd/journald.conf.d
+install -m 644 -o root -g root /dev/null /etc/systemd/journald.conf.d/00-volatile.conf
 cat <<'EOF' > /etc/systemd/journald.conf.d/00-volatile.conf
 [Journal]
 Storage=volatile
@@ -111,6 +101,8 @@ EOF
 rm -rf /var/log/journal
 
 # sockets setup
+install -d -m 755 /etc/tmpfiles.d
+install -m 644 -o root -g root /dev/null /etc/tmpfiles.d/gui-sockets.conf
 cat <<EOF > /etc/tmpfiles.d/gui-sockets.conf
 d  /run/user/1000        0700 1000 1000 -
 d  /run/user/1000/pulse  0700 1000 1000 -
@@ -118,9 +110,6 @@ d  /tmp/.X11-unix        1777 root root -
 L+ /run/user/1000/wayland-1    - - - - /mnt/.container_sockets/wayland-1
 L+ /run/user/1000/pulse/native - - - - /mnt/.container_sockets/pulse-native
 EOF
-
-chown root:root /etc/doas.conf
-chmod 0600 /etc/doas.conf
 
 if [ -x /usr/bin/doas ]; then
     ln -sf /usr/bin/doas /usr/local/bin/sudo
@@ -188,26 +177,36 @@ if [ -d "$USER_HOME" ]; then
 
     export HOME="$USER_HOME"
     export GNUPGHOME="$USER_HOME/.gnupg"
+    export SSH_DIR="$USER_HOME/.ssh"
     install -d -m 700 "\$GNUPGHOME"
+    install -d -m 700 "\$SSH_DIR"
 
     mkdir -p "$USER_HOME/git"
+
+    git_clone_once() {
+        local dir="\$1"
+        local url="\$2"
+
+        if [ ! -d "\$dir/.git" ]; then
+            GIT_TERMINAL_PROMPT=0 git clone --depth 1 "\$url" "\$dir"
+        fi
+    }
 
     TARGET_DIR="$USER_HOME/git/dotfiles"
     REPO_URL="$DOTFILES_REPO"
     ENVFILE_DIR="$USER_HOME/git/envfile"
     ENVFILE_REPO_URL="$ENVFILE_REPO"
+    PARU_OVERLAY_DIR="$USER_HOME/git/paru-overlay"
+    PARU_OVERLAY_REPO_URL="$PARU_OVERLAY_REPO"
 
-    if [ ! -d "\$TARGET_DIR/.git" ]; then
-        GIT_TERMINAL_PROMPT=0 git clone --depth 1 "\$REPO_URL" "\$TARGET_DIR"
-    fi
-
-    if [ ! -d "\$ENVFILE_DIR/.git" ]; then
-        GIT_TERMINAL_PROMPT=0 git clone --depth 1 "\$ENVFILE_REPO_URL" "\$ENVFILE_DIR"
-    fi
+    git_clone_once "\$TARGET_DIR" "\$REPO_URL"
+    git_clone_once "\$ENVFILE_DIR" "\$ENVFILE_REPO_URL"
 
     echo "Running make stow..."
     cd "\$TARGET_DIR"
     make bootstrap stow-arch
+
+    git_clone_once "\$PARU_OVERLAY_DIR" "\$PARU_OVERLAY_REPO_URL"
 
     install -d -m 700 "$USER_HOME/.config/secrets"
 
@@ -238,9 +237,11 @@ else
     log "No SSH_KEY provided; skipping authorized_keys."
 fi
 chown -R "$USERNAME:$USERNAME" "$SSH_DIR"
+chmod 700 "$SSH_DIR"
 
 
-mkdir -p /etc/ssh/sshd_config.d
+install -d -m 755 /etc/ssh/sshd_config.d
+install -m 644 -o root -g root /dev/null /etc/ssh/sshd_config.d/StreamLocalBindUnlink.conf
 echo StreamLocalBindUnlink yes > /etc/ssh/sshd_config.d/StreamLocalBindUnlink.conf
 if command -v systemctl >/dev/null 2>&1; then
     systemctl enable sshd || true
