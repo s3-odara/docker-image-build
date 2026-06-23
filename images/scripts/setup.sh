@@ -8,6 +8,7 @@ USER_PASSWORD="${USER_PASSWORD:-}"
 SSH_KEY="${SSH_KEY:-}"
 DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/s3-odara/dotfiles.git}"
 ENVFILE_REPO="${ENVFILE_REPO:-https://github.com/s3-odara/envfile.git}"
+PARU_OVERLAY_REPO="${PARU_OVERLAY_REPO:-https://github.com/s3-odara/paru-overlay}"
 MAKEFLAGS_TARGET="${MAKEFLAGS_TARGET:-16}"
 ARCH="$(uname -m)"
 
@@ -133,11 +134,25 @@ fi
 
 useradd -m -s /bin/bash -G wheel builder
 
-su - builder -c "rm -rf ~/paru"
-su - builder -c "GIT_TERMINAL_PROMPT=0 git clone --depth 1 https://aur.archlinux.org/paru.git ~/paru"
-su - builder -c "cd ~/paru && makepkg -sri --noconfirm --needed"
+su - builder -c "rm -rf ~/git/paru-overlay"
+su - builder -c "mkdir -p ~/git"
+su - builder -c "GIT_TERMINAL_PROMPT=0 git clone --depth 1 '$PARU_OVERLAY_REPO' ~/git/paru-overlay"
+su - builder -c "cd ~/git/paru-overlay/packages/paru && makepkg -sri --noconfirm --needed"
+
+install -d -m 700 -o builder -g builder /home/builder/.config/paru
+install -m 600 -o builder -g builder /dev/null /home/builder/.config/paru/paru.conf
+cat <<EOF > /home/builder/.config/paru/paru.conf
+Include = /etc/paru.conf
+
+[paru-overlay]
+Path = /home/builder/git/paru-overlay/packages
+Url = $PARU_OVERLAY_REPO
+Depth = 1
+GenerateSrcinfo = true
+EOF
 
 PACKAGES="doasedit-alternative zsh-pure-prompt"
+su - builder -c "paru -Sya --noconfirm"
 su - builder -c "paru -S --noconfirm --needed $PACKAGES"
 
 su - builder -c "yes | paru -Scc" || true
