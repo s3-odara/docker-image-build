@@ -141,7 +141,7 @@ GenerateSrcinfo = true
 EOF
 
 PACKAGES="doasedit-alternative zsh-pure-prompt"
-su - builder -c "paru -Sya --noconfirm"
+su - builder -c "paru -Sy --pkgbuilds --noconfirm"
 su - builder -c "paru -S --noconfirm --needed $PACKAGES"
 
 su - builder -c "yes | paru -Scc" || true
