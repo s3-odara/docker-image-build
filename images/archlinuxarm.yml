@@ -19,6 +19,11 @@ files:
 
       [Network]
       DHCP=yes
+  # Fix ping
+  - generator: dump
+    path: /etc/sysctl.d/99-ping.conf
+    content: |-
+      net.ipv4.ping_group_range = 0 2147483647
   - generator: copy
     source: ./images/scripts/setup.sh
     path: /root/setup.sh
@@ -162,9 +167,6 @@ actions:
       umount -l /etc/resolv.conf 2>/dev/null || true
       rm -f /etc/resolv.conf
       ln -s /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
-
-      # Fix ping
-      setcap cap_net_raw=ep /usr/bin/ping || chmod +s /usr/bin/ping
   - trigger: post-files
     action: |-
       #!/bin/sh -eu

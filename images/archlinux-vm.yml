@@ -28,6 +28,11 @@ files:
       ClientIdentifier=mac
     types:
       - vm
+  # Fix ping
+  - generator: dump
+    path: /etc/sysctl.d/99-ping.conf
+    content: |-
+      net.ipv4.ping_group_range = 0 2147483647
   - generator: incus-agent
     types:
       - vm
@@ -151,9 +156,6 @@ actions:
       ln -s /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
       systemctl enable systemd-networkd
       systemctl enable systemd-resolved
-
-      # Fix ping
-      setcap cap_net_raw=ep /usr/bin/ping || chmod +s /usr/bin/ping
 
   - trigger: post-files
     action: |-
