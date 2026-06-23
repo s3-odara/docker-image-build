@@ -223,9 +223,6 @@ if [ -d "$USER_HOME" ]; then
 EOF
 fi
 
-rm -rf "$USER_HOME/.cache"
-install -d -m 700 -o "$USERNAME" -g "$USERNAME" "$USER_HOME/.cache"
-
 SSH_DIR="/home/$USERNAME/.ssh"
 write_known_hosts "$SSH_DIR"
 
