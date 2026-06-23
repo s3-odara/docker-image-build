@@ -13,6 +13,7 @@ RUN set -eux; \
         fonts-ibm-plex \
         ghostscript \
         icc-profiles-free \
+        unzip \
         chromium \
         chromium-driver \
         chromium-l10n; \
