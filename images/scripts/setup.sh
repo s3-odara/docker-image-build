@@ -196,8 +196,6 @@ if [ -d "$USER_HOME" ]; then
     REPO_URL="$DOTFILES_REPO"
     ENVFILE_DIR="$USER_HOME/git/envfile"
     ENVFILE_REPO_URL="$ENVFILE_REPO"
-    PARU_OVERLAY_DIR="$USER_HOME/git/paru-overlay"
-    PARU_OVERLAY_REPO_URL="$PARU_OVERLAY_REPO"
 
     git_clone_once "\$TARGET_DIR" "\$REPO_URL"
     git_clone_once "\$ENVFILE_DIR" "\$ENVFILE_REPO_URL"
@@ -205,8 +203,6 @@ if [ -d "$USER_HOME" ]; then
     echo "Running make stow..."
     cd "\$TARGET_DIR"
     make bootstrap stow-arch
-
-    git_clone_once "\$PARU_OVERLAY_DIR" "\$PARU_OVERLAY_REPO_URL"
 
     install -d -m 700 "$USER_HOME/.config/secrets"
 
