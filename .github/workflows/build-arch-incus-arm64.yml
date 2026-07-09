@@ -42,7 +42,7 @@ jobs:
           pacman -S --noconfirm git go zstd distrobuilder aws-cli squashfs-tools rsync curl unzip jq
 
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Generate Build Variables
         id: vars
