@@ -140,9 +140,15 @@ Depth = 1
 GenerateSrcinfo = true
 EOF
 
-PACKAGES="doasedit-alternative zsh-pure-prompt"
+PACKAGES="zsh-pure-prompt"
+OPTIONAL_PACKAGES="doasedit-alternative"
 su - builder -c "paru -Sy --pkgbuilds --noconfirm"
 su - builder -c "paru -S --noconfirm --needed $PACKAGES"
+for package in $OPTIONAL_PACKAGES; do
+    if ! su - builder -c "paru -S --noconfirm --needed $package"; then
+        log "Optional package '$package' failed to install; continuing."
+    fi
+done
 
 su - builder -c "yes | paru -Scc" || true
 
