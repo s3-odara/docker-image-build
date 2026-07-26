@@ -17,10 +17,6 @@ on:
         description: "Arch ISO release date (YYYY.MM.DD). Empty = latest from archive."
         required: false
         type: string
-      incus_version:
-        description: "incus-simplestreams version (e.g. v6.0.0). Empty = latest tag."
-        required: false
-        type: string
 
 concurrency:
   group: arch-incus-${{ github.workflow }}-${{ github.ref }}
@@ -45,7 +41,7 @@ jobs:
         run: |
           set -euo pipefail
           pacman -Syu --noconfirm
-          pacman -S --noconfirm git go zstd distrobuilder aws-cli squashfs-tools rsync curl unzip jq \
+          pacman -S --noconfirm git zstd distrobuilder incus-tools aws-cli squashfs-tools rsync curl unzip jq \
             qemu-base dosfstools btrfs-progs
 
       - name: Checkout repository
@@ -57,14 +53,6 @@ jobs:
           bash scripts/ci/generate-build-variables.sh
         env:
           ISO_RELEASE_INPUT: ${{ github.event.inputs.iso_release }}
-          INCUS_VERSION_INPUT: ${{ github.event.inputs.incus_version }}
-
-      - name: Install Incus Simplestreams
-        run: |
-          set -euo pipefail
-          export GOPATH=/root/go
-          export PATH="$PATH:$GOPATH/bin"
-          go install "github.com/lxc/incus/v6/cmd/incus-simplestreams@${{ steps.vars.outputs.incus_version }}"
 
       - name: Build Incus Container Image
         env:
@@ -72,8 +60,6 @@ jobs:
           SSH_KEY: ${{ secrets.INCUS_SSH_KEY }}
         run: |
           set -euo pipefail
-          export GOPATH=/root/go
-          export PATH="$PATH:$GOPATH/bin"
           mkdir -p /var/cache/distrobuilder
 
           distrobuilder build-incus images/archlinux.yml \
@@ -95,8 +81,6 @@ jobs:
           SSH_KEY: ${{ secrets.INCUS_SSH_KEY }}
         run: |
           set -euo pipefail
-          export GOPATH=/root/go
-          export PATH="$PATH:$GOPATH/bin"
           mkdir -p /var/cache/distrobuilder
 
           distrobuilder build-incus images/archlinux-vm.yml \
@@ -130,8 +114,6 @@ jobs:
       - name: Add Images to Repository
         run: |
           set -euo pipefail
-          export GOPATH=/root/go
-          export PATH="$PATH:$GOPATH/bin"
           cd repo
 
           incus-simplestreams add \
@@ -155,8 +137,6 @@ jobs:
       - name: Cleanup Old Images
         run: |
           set -euo pipefail
-          export GOPATH=/root/go
-          export PATH="$PATH:$GOPATH/bin"
           cd repo
           incus-simplestreams prune --retention 1
 

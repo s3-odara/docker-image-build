@@ -4,7 +4,6 @@ set -euo pipefail
 BUILD_SERIAL="$(date -u +%Y%m%d_%H%M)"
 
 INPUT_RELEASE="${ISO_RELEASE_INPUT:-}"
-INPUT_INCUS_VERSION="${INCUS_VERSION_INPUT:-}"
 SKIP_ISO_RELEASE="${SKIP_ISO_RELEASE:-}"
 
 if [ "$SKIP_ISO_RELEASE" = "1" ]; then
@@ -31,21 +30,9 @@ else
   fi
 fi
 
-if [ -n "$INPUT_INCUS_VERSION" ]; then
-  INCUS_VERSION="$INPUT_INCUS_VERSION"
-else
-  INCUS_VERSION="$(go list -m -versions github.com/lxc/incus/v6 | awk '{print $NF}')"
-fi
-if [ -z "$INCUS_VERSION" ]; then
-  echo "::error::Failed to determine incus-simplestreams version"
-  exit 1
-fi
-echo "Using incus-simplestreams: $INCUS_VERSION"
-
 {
   if [ "$SKIP_ISO_RELEASE" != "1" ]; then
     echo "iso_release=$ISO_RELEASE"
   fi
   echo "build_serial=$BUILD_SERIAL"
-  echo "incus_version=$INCUS_VERSION"
 } >> "${GITHUB_OUTPUT:?GITHUB_OUTPUT is required}"
