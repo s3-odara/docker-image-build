@@ -138,7 +138,6 @@ Mode = rp
 
 [paru-overlay]
 Path = /home/builder/git/paru-overlay/packages
-Url = $PARU_OVERLAY_REPO
 Depth = 3
 GenerateSrcinfo = true
 EOF
