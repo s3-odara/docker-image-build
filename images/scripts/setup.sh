@@ -133,10 +133,13 @@ install -m 600 -o builder -g builder /dev/null /home/builder/.config/paru/paru.c
 cat <<EOF > /home/builder/.config/paru/paru.conf
 Include = /etc/paru.conf
 
+[options]
+Mode = rp
+
 [paru-overlay]
 Path = /home/builder/git/paru-overlay/packages
 Url = $PARU_OVERLAY_REPO
-Depth = 1
+Depth = 3
 GenerateSrcinfo = true
 EOF
 
