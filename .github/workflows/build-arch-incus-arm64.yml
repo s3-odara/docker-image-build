@@ -113,6 +113,8 @@ jobs:
     needs: build
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
 
     environment:
       name: production
@@ -130,11 +132,12 @@ jobs:
       R2_BUCKET_URI: s3://filess3-odaranet/pub/container-arm64
 
     steps:
-      - name: Install Incus SimpleStreams Tool
+      - name: Install dependencies
         run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends --yes incus-tools
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm \
+          incus-tools \
+          aws-cli
 
       - name: Checkout repository
         uses: actions/checkout@v7
