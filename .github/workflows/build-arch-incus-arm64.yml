@@ -4,16 +4,22 @@ on:
   schedule:
     - cron: "17 20 * * 4"
   push:
+    branches:
+      - master
+    paths:
+      - ".github/workflows/build-arch-incus-arm64.yml"
+      - "images/archlinuxarm.yml"
+      - "images/scripts/**"
+      - "scripts/ci/**"
+  pull_request:
+    branches:
+      - master
     paths:
       - ".github/workflows/build-arch-incus-arm64.yml"
       - "images/archlinuxarm.yml"
       - "images/scripts/**"
       - "scripts/ci/**"
   workflow_dispatch:
-
-concurrency:
-  group: arch-incus-arm64-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 defaults:
   run:
@@ -22,19 +28,37 @@ defaults:
 jobs:
   build:
     runs-on: ubuntu-24.04-arm
+
     container:
       image: lfdevs/archlinuxarm:base-devel
       options: --privileged
-    environment: cloudflare-r2-filess3-odaranet
+
+    environment:
+      name: test
+      deployment: false
+
     permissions:
       contents: read
+
+    concurrency:
+      group: arch-incus-arm64-build-${{ github.ref }}
+      cancel-in-progress: true
 
     steps:
       - name: Install System Dependencies
         run: |
           set -euo pipefail
+
           pacman -Syu --noconfirm
-          pacman -S --noconfirm git zstd distrobuilder incus-tools aws-cli squashfs-tools rsync curl unzip jq
+          pacman -S --noconfirm \
+            git \
+            zstd \
+            distrobuilder \
+            squashfs-tools \
+            rsync \
+            curl \
+            unzip \
+            jq
 
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -42,18 +66,23 @@ jobs:
       - name: Generate Build Variables
         id: vars
         run: |
+          set -euo pipefail
           bash scripts/ci/generate-build-variables.sh
         env:
           SKIP_ISO_RELEASE: "1"
 
       - name: Build Incus Container Image
         env:
-          USER_PASSWORD: ${{ secrets.INCUS_USER_PASSWORD }}
-          SSH_KEY: ${{ secrets.INCUS_SSH_KEY }}
+          USER_PASSWORD: ${{ vars.INCUS_USER_PASSWORD }}
+          SSH_KEY: ${{ vars.INCUS_SSH_KEY }}
         run: |
           set -euo pipefail
+
           mkdir -p /var/cache/distrobuilder
-          echo 'Server = http://nj.us.mirror.archlinuxarm.org/$arch/$repo' > /etc/pacman.d/mirrorlist
+
+          echo \
+            'Server = http://nj.us.mirror.archlinuxarm.org/$arch/$repo' \
+            > /etc/pacman.d/mirrorlist
 
           distrobuilder build-incus images/archlinuxarm.yml \
             --cache-dir /var/cache/distrobuilder \
@@ -62,57 +91,109 @@ jobs:
             -o image.architecture=aarch64 \
             -o image.variant=default \
             --compression zstd
+
           test -s incus.tar.zst
           test -s rootfs.squashfs
+
           mv incus.tar.zst incus-container.tar.zst
           mv rootfs.squashfs rootfs-container.squashfs
 
-      - name: Sync current repo from R2
+      - name: Upload Image Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: arch-incus-arm64-image
+          path: |
+            incus-container.tar.zst
+            rootfs-container.squashfs
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+
+    environment:
+      name: production
+
+    permissions:
+      contents: read
+
+    concurrency:
+      group: r2-filess3-odaranet-container-arm64
+      cancel-in-progress: false
+
+    env:
+      AWS_DEFAULT_REGION: auto
+      R2_ENDPOINT_URL: https://6ecd930c8cd4dc63f87c9398762626e8.r2.cloudflarestorage.com
+      R2_BUCKET_URI: s3://filess3-odaranet/pub/container-arm64
+
+    steps:
+      - name: Install Incus SimpleStreams Tool
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes incus-tools
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Download Image Artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: arch-incus-arm64-image
+          path: artifacts
+
+      - name: Sync Current Repository from R2
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-          R2_ENDPOINT_URL: https://6ecd930c8cd4dc63f87c9398762626e8.r2.cloudflarestorage.com
-          R2_BUCKET_PATH: s3://filess3-odaranet/pub/container-arm64
         run: |
           set -euo pipefail
-          mkdir -p repo
-          if ! aws s3 sync "$R2_BUCKET_PATH" ./repo --endpoint-url "$R2_ENDPOINT_URL"; then
-            echo "::warning::Failed to sync existing repository from R2 (continuing with empty repo)."
-          fi
 
-      - name: Add Images to Repository
+          mkdir -p repo
+
+          aws s3 sync \
+            "$R2_BUCKET_URI" \
+            ./repo \
+            --endpoint-url "$R2_ENDPOINT_URL"
+
+      - name: Add Image to Repository
         run: |
           set -euo pipefail
+
           cd repo
 
           incus-simplestreams add \
             --no-default-alias \
             --alias archlinux/latest \
-            ../incus-container.tar.zst \
-            ../rootfs-container.squashfs
+            ../artifacts/incus-container.tar.zst \
+            ../artifacts/rootfs-container.squashfs
 
-      - name: Prune Old Products (keep newest per OS/variant/arch)
+      - name: Prune Old Products
         run: |
           set -euo pipefail
+
           cd repo
           bash ../images/scripts/simplestreams-prune-products.sh
 
       - name: Cleanup Old Images
         run: |
           set -euo pipefail
+
           cd repo
           incus-simplestreams prune --retention 0
 
-      - name: Upload changes to R2
+      - name: Upload Changes to R2
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-          R2_ENDPOINT_URL: https://6ecd930c8cd4dc63f87c9398762626e8.r2.cloudflarestorage.com
-          R2_BUCKET_PATH: filess3-odaranet/pub/container-arm64
         run: |
           set -euo pipefail
-          aws s3 sync ./repo "s3://$R2_BUCKET_PATH" \
+
+          aws s3 sync \
+            ./repo \
+            "$R2_BUCKET_URI" \
             --endpoint-url "$R2_ENDPOINT_URL" \
             --delete

@@ -4,6 +4,18 @@ on:
   schedule:
     - cron: "17 20 * * 4"
   push:
+    branches:
+      - master
+    paths:
+      - ".github/workflows/build-arch-incus.yml"
+      - ".github/workflows/build-arch-incus-vm.yml"
+      - "images/archlinux.yml"
+      - "images/archlinux-vm.yml"
+      - "images/scripts/**"
+      - "scripts/ci/**"
+  pull_request:
+    branches:
+      - master
     paths:
       - ".github/workflows/build-arch-incus.yml"
       - ".github/workflows/build-arch-incus-vm.yml"
@@ -18,10 +30,6 @@ on:
         required: false
         type: string
 
-concurrency:
-  group: arch-incus-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 defaults:
   run:
     shell: bash
@@ -32,17 +40,35 @@ jobs:
     container:
       image: archlinux:base-devel
       options: --privileged
-    environment: cloudflare-r2-filess3-odaranet
+
+    environment:
+      name: test
+      deployment: false
+
     permissions:
       contents: read
+
+    concurrency:
+      group: arch-incus-build-${{ github.ref }}
+      cancel-in-progress: true
 
     steps:
       - name: Install System Dependencies
         run: |
           set -euo pipefail
           pacman -Syu --noconfirm
-          pacman -S --noconfirm git zstd distrobuilder incus-tools aws-cli squashfs-tools rsync curl unzip jq \
-            qemu-base dosfstools btrfs-progs
+          pacman -S --noconfirm \
+            git \
+            zstd \
+            distrobuilder \
+            squashfs-tools \
+            rsync \
+            curl \
+            unzip \
+            jq \
+            qemu-base \
+            dosfstools \
+            btrfs-progs
 
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -56,8 +82,8 @@ jobs:
 
       - name: Build Incus Container Image
         env:
-          USER_PASSWORD: ${{ secrets.INCUS_USER_PASSWORD }}
-          SSH_KEY: ${{ secrets.INCUS_SSH_KEY }}
+          USER_PASSWORD: ${{ vars.INCUS_USER_PASSWORD }}
+          SSH_KEY: ${{ vars.INCUS_SSH_KEY }}
         run: |
           set -euo pipefail
           mkdir -p /var/cache/distrobuilder
@@ -70,15 +96,17 @@ jobs:
             -o image.architecture=x86_64 \
             -o image.variant=default \
             --compression zstd
+
           test -s incus.tar.zst
           test -s rootfs.squashfs
+
           mv incus.tar.zst incus-container.tar.zst
           mv rootfs.squashfs rootfs-container.squashfs
 
       - name: Build Incus VM Image
         env:
-          USER_PASSWORD: ${{ secrets.INCUS_USER_PASSWORD }}
-          SSH_KEY: ${{ secrets.INCUS_SSH_KEY }}
+          USER_PASSWORD: ${{ vars.INCUS_USER_PASSWORD }}
+          SSH_KEY: ${{ vars.INCUS_SSH_KEY }}
         run: |
           set -euo pipefail
           mkdir -p /var/cache/distrobuilder
@@ -92,24 +120,74 @@ jobs:
             -o image.architecture=x86_64 \
             -o image.variant=default \
             --compression zstd
+
           test -s incus.tar.zst
           test -s disk.qcow2
+
           mv incus.tar.zst incus-vm.tar.zst
           mv disk.qcow2 disk-vm.qcow2
 
-      - name: Sync current repo from R2
+      - name: Upload Image Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: arch-incus-images
+          path: |
+            incus-container.tar.zst
+            rootfs-container.squashfs
+            incus-vm.tar.zst
+            disk-vm.qcow2
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+
+    environment:
+      name: production
+
+    permissions:
+      contents: read
+
+    concurrency:
+      group: r2-filess3-odaranet-container
+      cancel-in-progress: false
+
+    env:
+      AWS_DEFAULT_REGION: auto
+      R2_ENDPOINT_URL: https://6ecd930c8cd4dc63f87c9398762626e8.r2.cloudflarestorage.com
+      R2_BUCKET_URI: s3://filess3-odaranet/pub/container
+
+    steps:
+      - name: Install Incus SimpleStreams Tool
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes incus-tools
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Download Image Artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: arch-incus-images
+          path: artifacts
+
+      - name: Sync Current Repository from R2
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-          R2_ENDPOINT_URL: https://6ecd930c8cd4dc63f87c9398762626e8.r2.cloudflarestorage.com
-          R2_BUCKET_PATH: s3://filess3-odaranet/pub/container
         run: |
           set -euo pipefail
           mkdir -p repo
-          if ! aws s3 sync "$R2_BUCKET_PATH" ./repo --endpoint-url "$R2_ENDPOINT_URL"; then
-            echo "::warning::Failed to sync existing repository from R2 (continuing with empty repo)."
-          fi
+
+          aws s3 sync \
+            "$R2_BUCKET_URI" \
+            ./repo \
+            --endpoint-url "$R2_ENDPOINT_URL"
 
       - name: Add Images to Repository
         run: |
@@ -119,16 +197,16 @@ jobs:
           incus-simplestreams add \
             --no-default-alias \
             --alias archlinux/latest \
-            ../incus-container.tar.zst \
-            ../rootfs-container.squashfs
+            ../artifacts/incus-container.tar.zst \
+            ../artifacts/rootfs-container.squashfs
 
           incus-simplestreams add \
             --no-default-alias \
             --alias archlinux/vm \
-            ../incus-vm.tar.zst \
-            ../disk-vm.qcow2
+            ../artifacts/incus-vm.tar.zst \
+            ../artifacts/disk-vm.qcow2
 
-      - name: Prune Old Products (keep newest per OS/variant/arch)
+      - name: Prune Old Products
         run: |
           set -euo pipefail
           cd repo
@@ -140,15 +218,15 @@ jobs:
           cd repo
           incus-simplestreams prune --retention 1
 
-      - name: Upload changes to R2
+      - name: Upload Changes to R2
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: auto
-          R2_ENDPOINT_URL: https://6ecd930c8cd4dc63f87c9398762626e8.r2.cloudflarestorage.com
-          R2_BUCKET_PATH: filess3-odaranet/pub/container
         run: |
           set -euo pipefail
-          aws s3 sync ./repo "s3://$R2_BUCKET_PATH" \
+
+          aws s3 sync \
+            ./repo \
+            "$R2_BUCKET_URI" \
             --endpoint-url "$R2_ENDPOINT_URL" \
             --delete
