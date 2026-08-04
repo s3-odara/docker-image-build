@@ -137,6 +137,7 @@ jobs:
           pacman -Syu --noconfirm
           pacman -S --noconfirm \
           incus-tools \
+          jq \
           aws-cli
 
       - name: Checkout repository
